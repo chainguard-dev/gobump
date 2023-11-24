@@ -24,18 +24,6 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "no downgrade",
-			pkgVersions: []pkgVersion{
-				{
-					Name:    "github.com/google/uuid",
-					Version: "v1.0.0",
-				},
-			},
-			want: map[string]string{
-				"github.com/google/uuid": "v1.3.1",
-			},
-		},
-		{
 			name: "replace",
 			pkgVersions: []pkgVersion{
 				{
@@ -62,6 +50,35 @@ func TestUpdate(t *testing.T) {
 				if got := getVersion(modFile, pkg); got != want {
 					t.Errorf("expected %s, got %s", want, got)
 				}
+			}
+		})
+	}
+}
+
+func TestUpdateError(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pkgVersions []pkgVersion
+	}{
+		{
+			name: "no downgrade",
+			pkgVersions: []pkgVersion{
+				{
+					Name:    "github.com/google/uuid",
+					Version: "v1.0.0",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
+
+			_, err := doUpdate(tc.pkgVersions, tmpdir)
+			if err == nil {
+				t.Fatal("expected error, got nil")
 			}
 		})
 	}

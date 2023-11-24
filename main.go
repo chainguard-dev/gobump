@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/pkg/errors"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
 )
@@ -47,34 +46,45 @@ func doUpdate(pkgVersions []pkgVersion, modroot string) (*modfile.File, error) {
 	modpath := path.Join(modroot, "go.mod")
 	modFileContent, err := os.ReadFile(modpath)
 	if err != nil {
-		return nil, errors.Wrap(err, "error reading go.mod")
+		return nil, fmt.Errorf("error reading go.mod: %w", err)
 	}
 
 	modFile, err := modfile.Parse("go.mod", modFileContent, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "error parsing go.mod")
+		return nil, fmt.Errorf("error parsing go.mod: %w", err)
 	}
 
-	// Step 3: Check and update packages
 	for _, pkg := range pkgVersions {
 		currentVersion := getVersion(modFile, pkg.Name)
 		if currentVersion == "" {
-			return nil, errors.Errorf("Package %s not found in go.mod\n", pkg.Name)
+			return nil, fmt.Errorf("package %s not found in go.mod", pkg.Name)
 		}
 		if semver.Compare(currentVersion, pkg.Version) < 0 {
 			if err := updatePackage(pkg.Name, pkg.Version, modroot); err != nil {
-				fmt.Printf("Error updating package: %s\n", err)
+				return nil, fmt.Errorf("error updating package: %w", err)
 			}
 		} else {
-			fmt.Printf("Package %s is already at version %s\n", pkg.Name, pkg.Version)
+			return nil, fmt.Errorf("package %s is already at version %s", pkg.Name, pkg.Version)
 		}
 	}
 
+	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
 	newFileContent, err := os.ReadFile(modpath)
 	if err != nil {
 		return nil, err
 	}
-	return modfile.Parse("go.mod", newFileContent, nil)
+	newModFile, err := modfile.Parse("go.mod", newFileContent, nil)
+	if err != nil {
+		return nil, err
+	}
+	for _, pkg := range pkgVersions {
+		verStr := getVersion(newModFile, pkg.Name)
+		if semver.Compare(verStr, pkg.Version) < 0 {
+			return nil, fmt.Errorf("package %s is less than the desired version %s", pkg.Name, pkg.Version)
+		}
+	}
+
+	return newModFile, nil
 }
 
 func updatePackage(name, version, modroot string) error {
