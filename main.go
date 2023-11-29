@@ -12,7 +12,7 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-var packagesFlag = flag.String("packages", "", "A comma-separated list of packages to update")
+var packagesFlag = flag.String("packages", "", "A space-separated list of packages to update")
 var modrootFlag = flag.String("modroot", "", "path to the go.mod root")
 
 func main() {
@@ -22,7 +22,7 @@ func main() {
 		fmt.Println("Usage: gobump -packages=<package@version>,...")
 		os.Exit(1)
 	}
-	packages := strings.Split(*packagesFlag, ",")
+	packages := strings.Split(*packagesFlag, " ")
 	pkgVersions := []pkgVersion{}
 	for _, pkg := range packages {
 		parts := strings.Split(pkg, "@")
