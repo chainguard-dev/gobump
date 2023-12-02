@@ -84,6 +84,64 @@ func TestUpdateError(t *testing.T) {
 	}
 }
 
+func TestCommit(t *testing.T) {
+	// We use github.com/NVIDIA/go-nvml v0.11.7-0 in our go.mod
+	// That corresponds to 53c34bc04d66e9209eff8654bc70563cf380e214
+	pkg := "github.com/NVIDIA/go-nvml"
+
+	// An older commit is c3a16a2b07cf2251cbedb76fa68c9292b22bfa06
+	olderCommit := "c3a16a2b07cf2251cbedb76fa68c9292b22bfa06"
+	olderVersion := "v0.11.6-0"
+	// A newer commit is 95ef6acc3271a9894fd02c1071edef1d88527e20
+	newerCommit := "95ef6acc3271a9894fd02c1071edef1d"
+	newerVersion := "v0.12.0-1"
+
+	testCases := []struct {
+		name    string
+		version string
+		want    map[string]string
+	}{
+		{
+			name:    "pin to older",
+			version: olderCommit,
+			want: map[string]string{
+				pkg: olderVersion,
+			},
+		},
+		{
+			name:    "pin to newer",
+			version: newerCommit,
+			want: map[string]string{
+				pkg: newerVersion,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
+
+			pkgVersions := []pkgVersion{
+				{
+					Name:    pkg,
+					Version: tc.version,
+				},
+			}
+			modFile, err := doUpdate(pkgVersions, tmpdir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for pkg, want := range tc.want {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("expected %s, got %s", want, got)
+				}
+			}
+		})
+	}
+
+}
+
 func copyFile(t *testing.T, src, dst string) {
 	t.Helper()
 	_, err := exec.Command("cp", "-r", src, dst).Output()

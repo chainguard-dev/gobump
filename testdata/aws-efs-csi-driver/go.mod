@@ -18,6 +18,7 @@ require (
 	k8s.io/kubernetes v1.26.10
 	k8s.io/mount-utils v0.26.10
 	k8s.io/pod-security-admission v0.26.10
+	github.com/NVIDIA/go-nvml v0.11.7-0
 )
 
 require (

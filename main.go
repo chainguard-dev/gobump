@@ -59,12 +59,18 @@ func doUpdate(pkgVersions []pkgVersion, modroot string) (*modfile.File, error) {
 		if currentVersion == "" {
 			return nil, fmt.Errorf("package %s not found in go.mod", pkg.Name)
 		}
-		if semver.Compare(currentVersion, pkg.Version) < 0 {
-			if err := updatePackage(pkg.Name, pkg.Version, modroot); err != nil {
-				return nil, fmt.Errorf("error updating package: %w", err)
+		// Sometimes we request to pin to a specific commit.
+		// In that case, skip the compare check.
+		if semver.IsValid(pkg.Version) {
+			if semver.Compare(currentVersion, pkg.Version) > 0 {
+				return nil, fmt.Errorf("package %s is already at version %s", pkg.Name, pkg.Version)
 			}
 		} else {
-			return nil, fmt.Errorf("package %s is already at version %s", pkg.Name, pkg.Version)
+			fmt.Printf("Requesting pin to %s\n. This is not a valid SemVer, so skipping version check.", pkg.Version)
+		}
+
+		if err := updatePackage(pkg.Name, pkg.Version, modroot); err != nil {
+			return nil, fmt.Errorf("error updating package: %w", err)
 		}
 	}
 
