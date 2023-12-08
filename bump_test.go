@@ -42,7 +42,7 @@ func TestUpdate(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			modFile, err := doUpdate(tc.pkgVersions, tmpdir)
+			modFile, err := doUpdate(tc.pkgVersions, nil, tmpdir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -76,11 +76,32 @@ func TestUpdateError(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			_, err := doUpdate(tc.pkgVersions, tmpdir)
+			_, err := doUpdate(tc.pkgVersions, nil, tmpdir)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
 		})
+	}
+}
+
+func TestReplaces(t *testing.T) {
+	tmpdir := t.TempDir()
+	copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
+
+	modFile, err := doUpdate([]pkgVersion{}, []string{"github.com/google/gofuzz=github.com/fakefuzz@v1.2.3"}, tmpdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range modFile.Replace {
+		if r.Old.Path == "github.com/google/gofuzz" {
+			if r.New.Path != "github.com/fakefuzz" {
+				t.Errorf("expected replace of github.com/google/gofuzz with github.com/fakefuzz, got %s", r.New.Path)
+			}
+			if r.New.Version != "v1.2.3" {
+				t.Errorf("expected replace of github.com/google/gofuzz with v1.2.3, got %s", r.New.Version)
+			}
+			break
+		}
 	}
 }
 
@@ -128,7 +149,7 @@ func TestCommit(t *testing.T) {
 					Version: tc.version,
 				},
 			}
-			modFile, err := doUpdate(pkgVersions, tmpdir)
+			modFile, err := doUpdate(pkgVersions, nil, tmpdir)
 			if err != nil {
 				t.Fatal(err)
 			}

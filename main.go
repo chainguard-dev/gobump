@@ -14,6 +14,7 @@ import (
 
 var packagesFlag = flag.String("packages", "", "A space-separated list of packages to update")
 var modrootFlag = flag.String("modroot", "", "path to the go.mod root")
+var replacesFlag = flag.String("replaces", "", "A space-separated list of packages to replace")
 
 func main() {
 	flag.Parse()
@@ -22,6 +23,9 @@ func main() {
 		fmt.Println("Usage: gobump -packages=<package@version>,...")
 		os.Exit(1)
 	}
+
+	replaces := strings.Split(*replacesFlag, " ")
+
 	packages := strings.Split(*packagesFlag, " ")
 	pkgVersions := []pkgVersion{}
 	for _, pkg := range packages {
@@ -36,13 +40,13 @@ func main() {
 		})
 	}
 
-	if _, err := doUpdate(pkgVersions, *modrootFlag); err != nil {
+	if _, err := doUpdate(pkgVersions, replaces, *modrootFlag); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
-func doUpdate(pkgVersions []pkgVersion, modroot string) (*modfile.File, error) {
+func doUpdate(pkgVersions []pkgVersion, replaces []string, modroot string) (*modfile.File, error) {
 	modpath := path.Join(modroot, "go.mod")
 	modFileContent, err := os.ReadFile(modpath)
 	if err != nil {
@@ -52,6 +56,15 @@ func doUpdate(pkgVersions []pkgVersion, modroot string) (*modfile.File, error) {
 	modFile, err := modfile.Parse("go.mod", modFileContent, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing go.mod: %w", err)
+	}
+
+	// Do replaces in the beginning
+	for _, replace := range replaces {
+		cmd := exec.Command("go", "mod", "edit", "-replace", replace)
+		cmd.Dir = modroot
+		if err := cmd.Run(); err != nil {
+			return nil, err
+		}
 	}
 
 	for _, pkg := range pkgVersions {

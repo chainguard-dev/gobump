@@ -11,8 +11,9 @@ gobump -packages=<package@version>,... -modroot=<path to go mod>
 
 ### Flags
 
-* `-packages`: A comma-separated list of packages to update. Each package should be in the format package@version.
+* `-packages`: A comma-separated list of packages to update. Each package should be in the format `package@version`.
 * `-modroot`: Path to the go.mod root. If not specified, it defaults to the current directory.
+* `-replaces`: A comma-separated list of packages to replace. Each entry should be in the format `old=new@version`.
 
 ## Example
 
