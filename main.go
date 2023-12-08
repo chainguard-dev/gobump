@@ -24,7 +24,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	replaces := strings.Split(*replacesFlag, " ")
+	var replaces []string
+	if len(*replacesFlag) != 0 {
+		replaces = strings.Split(*replacesFlag, " ")
+	}
 
 	packages := strings.Split(*packagesFlag, " ")
 	pkgVersions := []pkgVersion{}
@@ -41,7 +44,7 @@ func main() {
 	}
 
 	if _, err := doUpdate(pkgVersions, replaces, *modrootFlag); err != nil {
-		fmt.Println(err)
+		fmt.Println("Error running update: ", err)
 		os.Exit(1)
 	}
 }
@@ -63,7 +66,7 @@ func doUpdate(pkgVersions []pkgVersion, replaces []string, modroot string) (*mod
 		cmd := exec.Command("go", "mod", "edit", "-replace", replace)
 		cmd.Dir = modroot
 		if err := cmd.Run(); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error running go mod edit -replace %s: %w", replace, err)
 		}
 	}
 
@@ -90,11 +93,11 @@ func doUpdate(pkgVersions []pkgVersion, replaces []string, modroot string) (*mod
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
 	newFileContent, err := os.ReadFile(modpath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading go.mod: %w", err)
 	}
 	newModFile, err := modfile.Parse("go.mod", newFileContent, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing go.mod: %w", err)
 	}
 	for _, pkg := range pkgVersions {
 		verStr := getVersion(newModFile, pkg.Name)
