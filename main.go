@@ -85,7 +85,7 @@ func doUpdate(pkgVersions []pkgVersion, replaces []string, modroot string) (*mod
 			fmt.Printf("Requesting pin to %s\n. This is not a valid SemVer, so skipping version check.", pkg.Version)
 		}
 
-		if err := updatePackage(pkg.Name, pkg.Version, modroot); err != nil {
+		if err := updatePackage(modFile, pkg.Name, pkg.Version, modroot); err != nil {
 			return nil, fmt.Errorf("error updating package: %w", err)
 		}
 	}
@@ -109,7 +109,17 @@ func doUpdate(pkgVersions []pkgVersion, replaces []string, modroot string) (*mod
 	return newModFile, nil
 }
 
-func updatePackage(name, version, modroot string) error {
+func updatePackage(modFile *modfile.File, name, version, modroot string) error {
+	// Check if the package is replaced first
+	for _, replace := range modFile.Replace {
+		if replace.Old.Path == name {
+			cmd := exec.Command("go", "mod", "edit", "-replace", fmt.Sprintf("%s=%s@%s", replace.Old.Path, name, version))
+			cmd.Dir = modroot
+			return cmd.Run()
+		}
+	}
+
+	// No replace, just update!
 	cmd := exec.Command("go", "get", fmt.Sprintf("%s@%s", name, version))
 	cmd.Dir = modroot
 	if err := cmd.Run(); err != nil {
@@ -120,17 +130,20 @@ func updatePackage(name, version, modroot string) error {
 
 func getVersion(modFile *modfile.File, packageName string) string {
 	// Handle package update, including 'replace' clause
+
+	// Replace checks have to come first!
+	for _, replace := range modFile.Replace {
+		if replace.Old.Path == packageName {
+			return replace.New.Version
+		}
+	}
+
 	for _, req := range modFile.Require {
 		if req.Mod.Path == packageName {
 			return req.Mod.Version
 		}
 	}
 
-	for _, replace := range modFile.Replace {
-		if replace.Old.Path == packageName {
-			return replace.New.Version
-		}
-	}
 	return ""
 }
 
