@@ -113,14 +113,14 @@ func updatePackage(modFile *modfile.File, name, version, modroot string) error {
 	// Check if the package is replaced first
 	for _, replace := range modFile.Replace {
 		if replace.Old.Path == name {
-			cmd := exec.Command("go", "mod", "edit", "-replace", fmt.Sprintf("%s=%s@%s", replace.Old.Path, name, version))
+			cmd := exec.Command("go", "mod", "edit", "-replace", fmt.Sprintf("%s=%s@%s", replace.Old.Path, name, version)) //nolint:gosec
 			cmd.Dir = modroot
 			return cmd.Run()
 		}
 	}
 
 	// No replace, just update!
-	cmd := exec.Command("go", "get", fmt.Sprintf("%s@%s", name, version))
+	cmd := exec.Command("go", "get", fmt.Sprintf("%s@%s", name, version)) //nolint:gosec
 	cmd.Dir = modroot
 	if err := cmd.Run(); err != nil {
 		return err
