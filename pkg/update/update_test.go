@@ -1,19 +1,21 @@
-package main
+package update
 
 import (
 	"os/exec"
 	"testing"
+
+	"github.com/chainguard-dev/gobump/pkg/types"
 )
 
 func TestUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
-		pkgVersions []pkgVersion
+		pkgVersions []*types.Package
 		want        map[string]string
 	}{
 		{
 			name: "standard update",
-			pkgVersions: []pkgVersion{
+			pkgVersions: []*types.Package{
 				{
 					Name:    "github.com/google/uuid",
 					Version: "v1.4.0",
@@ -25,7 +27,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name: "replace",
-			pkgVersions: []pkgVersion{
+			pkgVersions: []*types.Package{
 				{
 					Name:    "k8s.io/client-go",
 					Version: "v0.28.0",
@@ -42,7 +44,7 @@ func TestUpdate(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			modFile, err := doUpdate(tc.pkgVersions, nil, tmpdir)
+			modFile, err := DoUpdate(tc.pkgVersions, nil, tmpdir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -58,11 +60,11 @@ func TestUpdate(t *testing.T) {
 func TestUpdateError(t *testing.T) {
 	testCases := []struct {
 		name        string
-		pkgVersions []pkgVersion
+		pkgVersions []*types.Package
 	}{
 		{
 			name: "no downgrade",
-			pkgVersions: []pkgVersion{
+			pkgVersions: []*types.Package{
 				{
 					Name:    "github.com/google/uuid",
 					Version: "v1.0.0",
@@ -76,7 +78,7 @@ func TestUpdateError(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			_, err := doUpdate(tc.pkgVersions, nil, tmpdir)
+			_, err := DoUpdate(tc.pkgVersions, nil, tmpdir)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -88,7 +90,7 @@ func TestReplaces(t *testing.T) {
 	tmpdir := t.TempDir()
 	copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-	modFile, err := doUpdate([]pkgVersion{}, []string{"github.com/google/gofuzz=github.com/fakefuzz@v1.2.3"}, tmpdir)
+	modFile, err := DoUpdate([]*types.Package{}, []string{"github.com/google/gofuzz=github.com/fakefuzz@v1.2.3"}, tmpdir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,13 +145,13 @@ func TestCommit(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			pkgVersions := []pkgVersion{
+			pkgVersions := []*types.Package{
 				{
 					Name:    pkg,
 					Version: tc.version,
 				},
 			}
-			modFile, err := doUpdate(pkgVersions, nil, tmpdir)
+			modFile, err := DoUpdate(pkgVersions, nil, tmpdir)
 			if err != nil {
 				t.Fatal(err)
 			}

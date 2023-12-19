@@ -31,7 +31,7 @@ Go 1.20 or later
 To install gobump, you can use go install:
 
 ```shell
-go install github.com/dlorenc/gobump@latest
+go install github.com/chainguard-dev/gobump@latest
 ```
 
 ## Contributing

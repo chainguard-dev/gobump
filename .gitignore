@@ -9,7 +9,7 @@
 *.dylib
 
 # binary tool
-gobump
+./gobump
 
 # Test binary, built with `go test -c`
 *.test
@@ -22,3 +22,5 @@ gobump
 
 # Go workspace file
 go.work
+
+bin*
