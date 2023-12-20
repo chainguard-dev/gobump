@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/spf13/cobra v1.8.0
 	golang.org/x/mod v0.14.0
+	k8s.io/apimachinery v0.29.0
 	sigs.k8s.io/release-utils v0.7.7
 )
 

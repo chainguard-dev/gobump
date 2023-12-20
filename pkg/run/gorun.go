@@ -3,13 +3,27 @@ package run
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"strings"
+
+	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
 func GoModTidy(modroot string) (string, error) {
-	log.Println("Running go mod tidy ...")
-	cmd := exec.Command("go", "mod", "tidy")
+	cmd := exec.Command("go", "env", "GOVERSION")
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%v: %w", cmd, err)
+	}
+	goVersion := strings.TrimPrefix(strings.TrimSpace(string(out)), "go")
+	v := versionutil.MustParseGeneric(goVersion)
+	goMinorVersion := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+
+	log.Printf("Running go mod tidy with go version '%s' ...\n", goMinorVersion)
+
+	cmd = exec.Command("go", "mod", "tidy", "-go", goMinorVersion)
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
 		return strings.TrimSpace(string(bytes)), err
