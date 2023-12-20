@@ -66,6 +66,14 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 }
 
 func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool) (*modfile.File, error) {
+	// Run go mod tidy before
+	if tidy {
+		output, err := run.GoModTidy(modroot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
+		}
+	}
+
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
 	modpath := path.Join(modroot, "go.mod")
 	modFile, err := ParseGoModfile(modpath)
