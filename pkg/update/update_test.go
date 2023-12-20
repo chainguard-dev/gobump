@@ -10,13 +10,13 @@ import (
 func TestUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
-		pkgVersions []*types.Package
+		pkgVersions map[string]*types.Package
 		want        map[string]string
 	}{
 		{
 			name: "standard update",
-			pkgVersions: []*types.Package{
-				{
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
 					Name:    "github.com/google/uuid",
 					Version: "v1.4.0",
 				},
@@ -27,8 +27,8 @@ func TestUpdate(t *testing.T) {
 		},
 		{
 			name: "replace",
-			pkgVersions: []*types.Package{
-				{
+			pkgVersions: map[string]*types.Package{
+				"k8s.io/client-go": {
 					Name:    "k8s.io/client-go",
 					Version: "v0.28.0",
 				},
@@ -44,7 +44,47 @@ func TestUpdate(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, nil, tmpdir)
+			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for pkg, want := range tc.want {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("expected %s, got %s", want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestGoModTidy(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pkgVersions map[string]*types.Package
+		want        map[string]string
+	}{
+		{
+			name: "standard update",
+			pkgVersions: map[string]*types.Package{
+				"github.com/sirupsen/logrus": {
+					Name:    "github.com/sirupsen/logrus",
+					Version: "v1.9.0",
+				},
+			},
+			want: map[string]string{
+				"github.com/sirupsen/logrus": "v1.9.0",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/hello/go.mod", tmpdir)
+			copyFile(t, "testdata/hello/go.sum", tmpdir)
+			copyFile(t, "testdata/hello/main.go", tmpdir)
+
+			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,12 +100,12 @@ func TestUpdate(t *testing.T) {
 func TestUpdateError(t *testing.T) {
 	testCases := []struct {
 		name        string
-		pkgVersions []*types.Package
+		pkgVersions map[string]*types.Package
 	}{
 		{
 			name: "no downgrade",
-			pkgVersions: []*types.Package{
-				{
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
 					Name:    "github.com/google/uuid",
 					Version: "v1.0.0",
 				},
@@ -78,7 +118,7 @@ func TestUpdateError(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			_, err := DoUpdate(tc.pkgVersions, nil, tmpdir)
+			_, err := DoUpdate(tc.pkgVersions, tmpdir, false)
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -90,7 +130,15 @@ func TestReplaces(t *testing.T) {
 	tmpdir := t.TempDir()
 	copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-	modFile, err := DoUpdate([]*types.Package{}, []string{"github.com/google/gofuzz=github.com/fakefuzz@v1.2.3"}, tmpdir)
+	replaces := map[string]*types.Package{
+		"github.com/google/gofuzz": {
+			OldName: "github.com/google/gofuzz",
+			Name:    "github.com/fakefuzz",
+			Version: "v1.2.3",
+			Replace: true,
+		}}
+
+	modFile, err := DoUpdate(replaces, tmpdir, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,13 +193,13 @@ func TestCommit(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			pkgVersions := []*types.Package{
-				{
+			pkgVersions := map[string]*types.Package{
+				pkg: {
 					Name:    pkg,
 					Version: tc.version,
 				},
 			}
-			modFile, err := DoUpdate(pkgVersions, nil, tmpdir)
+			modFile, err := DoUpdate(pkgVersions, tmpdir, false)
 			if err != nil {
 				t.Fatal(err)
 			}

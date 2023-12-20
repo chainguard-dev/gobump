@@ -34,26 +34,46 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		packages := strings.Split(rootFlags.packages, ",")
-		pkgVersions := []*types.Package{}
+		pkgVersions := map[string]*types.Package{}
 		for _, pkg := range packages {
 			parts := strings.Split(pkg, "@")
 			if len(parts) != 2 {
 				fmt.Println("Usage: gobump -packages=<package@version>,...")
 				os.Exit(1)
 			}
-			pkgVersions = append(pkgVersions, &types.Package{
+			pkgVersions[parts[0]] = &types.Package{
 				Name:    parts[0],
 				Version: parts[1],
-			})
+			}
 		}
 
 		var replaces []string
 		if len(rootFlags.replaces) != 0 {
 			replaces = strings.Split(rootFlags.replaces, " ")
+			for _, replace := range replaces {
+				parts := strings.Split(replace, "=")
+				if len(parts) != 2 {
+					fmt.Println("Usage: gobump -replaces=<oldpackage=newpackage@version>,...")
+					os.Exit(1)
+				}
+				// extract the new package name and version
+				rep := strings.Split(strings.TrimPrefix(replace, fmt.Sprintf("%s=", parts[0])), "@")
+				if len(rep) != 2 {
+					fmt.Println("Usage: gobump -replaces=<oldpackage=newpackage@version>,...")
+					os.Exit(1)
+				}
+				// Merge/Add the packages to replace reusing the initial list of packages
+				pkgVersions[rep[0]] = &types.Package{
+					OldName: parts[0],
+					Name:    rep[0],
+					Version: rep[1],
+					Replace: true,
+				}
+			}
 		}
 
-		if _, err := update.DoUpdate(pkgVersions, replaces, rootFlags.modroot); err != nil {
-			fmt.Println("Error running update: ", err)
+		if _, err := update.DoUpdate(pkgVersions, rootFlags.modroot, rootFlags.tidy); err != nil {
+			fmt.Println("failed running update: ", err)
 			os.Exit(1)
 		}
 	},
