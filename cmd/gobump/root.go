@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 			log.Println("Usage: gobump -packages=<package@version>,...")
 			os.Exit(1)
 		}
-		packages := strings.Split(rootFlags.packages, ",")
+		packages := strings.Split(rootFlags.packages, " ")
 		pkgVersions := map[string]*types.Package{}
 		for _, pkg := range packages {
 			parts := strings.Split(pkg, "@")
