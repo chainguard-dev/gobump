@@ -29,6 +29,7 @@ func TestUpdate(t *testing.T) {
 			name: "replace",
 			pkgVersions: map[string]*types.Package{
 				"k8s.io/client-go": {
+					OldName: "k8s.io/client-go",
 					Name:    "k8s.io/client-go",
 					Version: "v0.28.0",
 				},
