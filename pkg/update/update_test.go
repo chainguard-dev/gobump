@@ -44,7 +44,7 @@ func TestUpdate(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, false)
+			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, false, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -84,7 +84,7 @@ func TestGoModTidy(t *testing.T) {
 			copyFile(t, "testdata/hello/go.sum", tmpdir)
 			copyFile(t, "testdata/hello/main.go", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, true)
+			modFile, err := DoUpdate(tc.pkgVersions, tmpdir, true, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -118,7 +118,7 @@ func TestUpdateError(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			_, err := DoUpdate(tc.pkgVersions, tmpdir, false)
+			_, err := DoUpdate(tc.pkgVersions, tmpdir, false, "")
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -138,7 +138,7 @@ func TestReplaces(t *testing.T) {
 			Replace: true,
 		}}
 
-	modFile, err := DoUpdate(replaces, tmpdir, false)
+	modFile, err := DoUpdate(replaces, tmpdir, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +199,7 @@ func TestCommit(t *testing.T) {
 					Version: tc.version,
 				},
 			}
-			modFile, err := DoUpdate(pkgVersions, tmpdir, false)
+			modFile, err := DoUpdate(pkgVersions, tmpdir, false, "1.21")
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -65,10 +65,10 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	return nil
 }
 
-func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool) (*modfile.File, error) {
+func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, goVersion string) (*modfile.File, error) {
 	// Run go mod tidy before
 	if tidy {
-		output, err := run.GoModTidy(modroot)
+		output, err := run.GoModTidy(modroot, goVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
@@ -117,7 +117,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool) 
 
 	// Run go mod tidy
 	if tidy {
-		output, err := run.GoModTidy(modroot)
+		output, err := run.GoModTidy(modroot, goVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}

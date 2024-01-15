@@ -10,20 +10,23 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
-func GoModTidy(modroot string) (string, error) {
-	cmd := exec.Command("go", "env", "GOVERSION")
-	cmd.Stderr = os.Stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("%v: %w", cmd, err)
+func GoModTidy(modroot, goVersion string) (string, error) {
+	if goVersion == "" {
+		cmd := exec.Command("go", "env", "GOVERSION")
+		cmd.Stderr = os.Stderr
+		out, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("%v: %w", cmd, err)
+		}
+		goVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "go")
+
+		v := versionutil.MustParseGeneric(goVersion)
+		goVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+
+		log.Printf("Running go mod tidy with go version '%s' ...\n", goVersion)
 	}
-	goVersion := strings.TrimPrefix(strings.TrimSpace(string(out)), "go")
-	v := versionutil.MustParseGeneric(goVersion)
-	goMinorVersion := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 
-	log.Printf("Running go mod tidy with go version '%s' ...\n", goMinorVersion)
-
-	cmd = exec.Command("go", "mod", "tidy", "-go", goMinorVersion)
+	cmd := exec.Command("go", "mod", "tidy", "-go", goVersion)
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
 		return strings.TrimSpace(string(bytes)), err
