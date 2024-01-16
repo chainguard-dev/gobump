@@ -92,7 +92,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, 
 		if pkg.Replace {
 			log.Printf("Update package: %s\n", k)
 			log.Println("Running go mod edit replace ...")
-			if output, err := run.GoModEditReplaceModule(pkg.Name, pkg.Name, pkg.Version, modroot); err != nil {
+			if output, err := run.GoModEditReplaceModule(pkg.OldName, pkg.Name, pkg.Version, modroot); err != nil {
 				return nil, fmt.Errorf("failed to run 'go mod edit -replace': %v with output: %v", err, output)
 			}
 		}
@@ -131,7 +131,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, 
 	for _, pkg := range pkgVersions {
 		verStr := getVersion(newModFile, pkg.Name)
 		if semver.Compare(verStr, pkg.Version) < 0 {
-			return nil, fmt.Errorf("package %s is less than the desired version %s", pkg.Name, pkg.Version)
+			return nil, fmt.Errorf("package %s with %s is less than the desired version %s", pkg.Name, verStr, pkg.Version)
 		}
 	}
 
@@ -143,7 +143,8 @@ func getVersion(modFile *modfile.File, packageName string) string {
 
 	// Replace checks have to come first!
 	for _, replace := range modFile.Replace {
-		if replace.Old.Path == packageName {
+		// Check if there is a new
+		if replace.New.Path == packageName {
 			return replace.New.Version
 		}
 	}
