@@ -66,16 +66,26 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 }
 
 func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfile.File, error) {
+	modpath := path.Join(cfg.Modroot, "go.mod")
+
+	goVersion := cfg.GoVersion
+	if goVersion == "" {
+		// Read the go version from go.mod file and use that one
+		modFile, _, err := ParseGoModfile(modpath)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
+		}
+		goVersion = modFile.Go.Version
+	}
 	// Run go mod tidy before
 	if cfg.Tidy {
-		output, err := run.GoModTidy(cfg.Modroot, cfg.GoVersion)
+		output, err := run.GoModTidy(cfg.Modroot, goVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
 	}
 
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
-	modpath := path.Join(cfg.Modroot, "go.mod")
 	modFile, content, err := ParseGoModfile(modpath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
@@ -117,7 +127,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 
 	// Run go mod tidy
 	if cfg.Tidy {
-		output, err := run.GoModTidy(cfg.Modroot, cfg.GoVersion)
+		output, err := run.GoModTidy(cfg.Modroot, goVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
