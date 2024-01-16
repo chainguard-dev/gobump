@@ -7,3 +7,10 @@ type Package struct {
 	Replace bool
 	Require bool
 }
+
+type Config struct {
+	Modroot   string
+	GoVersion string
+	ShowDiff  bool
+	Tidy      bool
+}
