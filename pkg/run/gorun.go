@@ -22,10 +22,9 @@ func GoModTidy(modroot, goVersion string) (string, error) {
 
 		v := versionutil.MustParseGeneric(goVersion)
 		goVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
-
-		log.Printf("Running go mod tidy with go version '%s' ...\n", goVersion)
 	}
 
+	log.Printf("Running go mod tidy with go version '%s' ...\n", goVersion)
 	cmd := exec.Command("go", "mod", "tidy", "-go", goVersion)
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
