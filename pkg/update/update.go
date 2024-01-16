@@ -6,24 +6,24 @@ import (
 	"os"
 	"path"
 
-	"golang.org/x/mod/modfile"
-	"golang.org/x/mod/semver"
-
 	"github.com/chainguard-dev/gobump/pkg/run"
 	"github.com/chainguard-dev/gobump/pkg/types"
+	"github.com/google/go-cmp/cmp"
+	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/semver"
 )
 
-func ParseGoModfile(path string) (*modfile.File, error) {
+func ParseGoModfile(path string) (*modfile.File, []byte, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, content, err
 	}
 	mod, err := modfile.Parse("go.mod", content, nil)
 	if err != nil {
-		return nil, err
+		return nil, content, err
 	}
 
-	return mod, nil
+	return mod, content, nil
 }
 
 func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.File) error {
@@ -65,18 +65,18 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	return nil
 }
 
-func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, goVersion string) (*modfile.File, error) {
+func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfile.File, error) {
 	// Run go mod tidy before
-	if tidy {
-		output, err := run.GoModTidy(modroot, goVersion)
+	if cfg.Tidy {
+		output, err := run.GoModTidy(cfg.Modroot, cfg.GoVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
 	}
 
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
-	modpath := path.Join(modroot, "go.mod")
-	modFile, err := ParseGoModfile(modpath)
+	modpath := path.Join(cfg.Modroot, "go.mod")
+	modFile, content, err := ParseGoModfile(modpath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
 	}
@@ -92,7 +92,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, 
 		if pkg.Replace {
 			log.Printf("Update package: %s\n", k)
 			log.Println("Running go mod edit replace ...")
-			if output, err := run.GoModEditReplaceModule(pkg.OldName, pkg.Name, pkg.Version, modroot); err != nil {
+			if output, err := run.GoModEditReplaceModule(pkg.OldName, pkg.Name, pkg.Version, cfg.Modroot); err != nil {
 				return nil, fmt.Errorf("failed to run 'go mod edit -replace': %v with output: %v", err, output)
 			}
 		}
@@ -104,27 +104,27 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, 
 			log.Printf("Update package: %s\n", k)
 			if pkg.Require {
 				log.Println("Running go mod edit -droprequire ...")
-				if output, err := run.GoModEditDropRequireModule(pkg.Name, modroot); err != nil {
+				if output, err := run.GoModEditDropRequireModule(pkg.Name, cfg.Modroot); err != nil {
 					return nil, fmt.Errorf("failed to run 'go mod edit -droprequire': %v with output: %v", err, output)
 				}
 			}
 			log.Println("Running go get ...")
-			if output, err := run.GoGetModule(pkg.Name, pkg.Version, modroot); err != nil {
+			if output, err := run.GoGetModule(pkg.Name, pkg.Version, cfg.Modroot); err != nil {
 				return nil, fmt.Errorf("failed to run 'go get': %v with output: %v", err, output)
 			}
 		}
 	}
 
 	// Run go mod tidy
-	if tidy {
-		output, err := run.GoModTidy(modroot, goVersion)
+	if cfg.Tidy {
+		output, err := run.GoModTidy(cfg.Modroot, cfg.GoVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
 	}
 
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
-	newModFile, err := ParseGoModfile(modpath)
+	newModFile, newContent, err := ParseGoModfile(modpath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
 	}
@@ -132,6 +132,12 @@ func DoUpdate(pkgVersions map[string]*types.Package, modroot string, tidy bool, 
 		verStr := getVersion(newModFile, pkg.Name)
 		if semver.Compare(verStr, pkg.Version) < 0 {
 			return nil, fmt.Errorf("package %s with %s is less than the desired version %s", pkg.Name, verStr, pkg.Version)
+		}
+	}
+
+	if cfg.ShowDiff {
+		if diff := cmp.Diff(string(content), string(newContent)); diff != "" {
+			fmt.Println(diff)
 		}
 	}
 

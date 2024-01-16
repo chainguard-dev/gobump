@@ -18,6 +18,7 @@ type rootCLIFlags struct {
 	replaces  string
 	goVersion string
 	tidy      bool
+	showDiff  bool
 }
 
 var rootFlags rootCLIFlags
@@ -73,7 +74,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		if _, err := update.DoUpdate(pkgVersions, rootFlags.modroot, rootFlags.tidy, rootFlags.goVersion); err != nil {
+		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff}); err != nil {
 			fmt.Println("failed running update: ", err)
 			os.Exit(1)
 		}
@@ -94,5 +95,6 @@ func init() {
 	flagSet.StringVar(&rootFlags.modroot, "modroot", "", "path to the go.mod root")
 	flagSet.StringVar(&rootFlags.replaces, "replaces", "", "A space-separated list of packages to replace")
 	flagSet.BoolVar(&rootFlags.tidy, "tidy", false, "Run 'go mod tidy' command")
+	flagSet.BoolVar(&rootFlags.showDiff, "show-diff", false, "Show the difference between the original and 'go.mod' files")
 	flagSet.StringVar(&rootFlags.goVersion, "go-version", "", "set the go-version for go-mod-tidy")
 }
