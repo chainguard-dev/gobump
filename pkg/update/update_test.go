@@ -148,6 +148,9 @@ func TestReplaces(t *testing.T) {
 			if r.New.Path != "github.com/fakefuzz" {
 				t.Errorf("expected replace of github.com/google/gofuzz with github.com/fakefuzz, got %s", r.New.Path)
 			}
+			if r.Old.Path != "github.com/google/gofuzz" {
+				t.Errorf("expected replace of github.com/google/gofuzz, got %s", r.Old.Path)
+			}
 			if r.New.Version != "v1.2.3" {
 				t.Errorf("expected replace of github.com/google/gofuzz with v1.2.3, got %s", r.New.Version)
 			}
