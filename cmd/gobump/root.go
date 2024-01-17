@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strings"
 
 	"github.com/chainguard-dev/gobump/pkg/types"
@@ -30,18 +28,16 @@ var rootCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if rootFlags.packages == "" {
-			log.Println("Usage: gobump -packages=<package@version>,...")
-			os.Exit(1)
+			return fmt.Errorf("Error: No packages provided. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
 		}
 		packages := strings.Split(rootFlags.packages, " ")
 		pkgVersions := map[string]*types.Package{}
 		for _, pkg := range packages {
 			parts := strings.Split(pkg, "@")
 			if len(parts) != 2 {
-				fmt.Println("Usage: gobump -packages=<package@version>,...")
-				os.Exit(1)
+				return fmt.Errorf("Error: Invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
 			}
 			pkgVersions[parts[0]] = &types.Package{
 				Name:    parts[0],
@@ -55,14 +51,12 @@ var rootCmd = &cobra.Command{
 			for _, replace := range replaces {
 				parts := strings.Split(replace, "=")
 				if len(parts) != 2 {
-					fmt.Println("Usage: gobump -replaces=<oldpackage=newpackage@version>,...")
-					os.Exit(1)
+					return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
 				}
 				// extract the new package name and version
 				rep := strings.Split(strings.TrimPrefix(replace, fmt.Sprintf("%s=", parts[0])), "@")
 				if len(rep) != 2 {
-					fmt.Println("Usage: gobump -replaces=<oldpackage=newpackage@version>,...")
-					os.Exit(1)
+					return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
 				}
 				// Merge/Add the packages to replace reusing the initial list of packages
 				pkgVersions[rep[0]] = &types.Package{
@@ -75,9 +69,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff}); err != nil {
-			fmt.Println("failed running update: ", err)
-			os.Exit(1)
+			return fmt.Errorf("Failed to running update. Error: %v", err)
 		}
+		return nil
 	},
 }
 
