@@ -145,8 +145,11 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 	for _, pkg := range pkgVersions {
 		verStr := getVersion(newModFile, pkg.Name)
-		if semver.Compare(verStr, pkg.Version) < 0 {
+		if verStr != "" && semver.Compare(verStr, pkg.Version) < 0 {
 			return nil, fmt.Errorf("package %s with %s is less than the desired version %s", pkg.Name, verStr, pkg.Version)
+		}
+		if verStr == "" {
+			return nil, fmt.Errorf("package %s was not found on the go.mod file. Please remove the package or add it to the list of 'replaces'", pkg.Name)
 		}
 	}
 
