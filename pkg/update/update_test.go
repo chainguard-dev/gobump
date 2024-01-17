@@ -98,6 +98,46 @@ func TestGoModTidy(t *testing.T) {
 	}
 }
 
+func TestReplaceAndRequire(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pkgVersions map[string]*types.Package
+		want        map[string]string
+	}{
+		{
+			name: "standard update",
+			pkgVersions: map[string]*types.Package{
+				"github.com/sirupsen/logrus": {
+					Name:    "github.com/sirupsen/logrus",
+					Version: "v1.9.0",
+				},
+			},
+			want: map[string]string{
+				"github.com/sirupsen/logrus": "v1.9.0",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/bye/go.mod", tmpdir)
+			copyFile(t, "testdata/bye/go.sum", tmpdir)
+			copyFile(t, "testdata/bye/main.go", tmpdir)
+
+			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for pkg, want := range tc.want {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("expected %s, got %s", want, got)
+				}
+			}
+		})
+	}
+}
+
 func TestUpdateError(t *testing.T) {
 	testCases := []struct {
 		name        string

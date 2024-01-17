@@ -33,6 +33,11 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 			if _, ok := pkgVersions[replace.New.Path]; ok {
 				// pkg is already been replaced
 				pkgVersions[replace.New.Path].Replace = true
+				// This happens when we found a replace in the go mod for a dependency that we defined in deps.
+				// We need to drop that replace, so we need to set the name of the old path to use the existing one in the go.mod.
+				if pkgVersions[replace.New.Path].OldName == "" {
+					pkgVersions[replace.New.Path].OldName = replace.Old.Path
+				}
 				if semver.IsValid(pkgVersions[replace.New.Path].Version) {
 					if semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
 						return fmt.Errorf("package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version)
@@ -103,7 +108,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 			log.Printf("Update package: %s\n", k)
 			log.Println("Running go mod edit replace ...")
 			if output, err := run.GoModEditReplaceModule(pkg.OldName, pkg.Name, pkg.Version, cfg.Modroot); err != nil {
-				return nil, fmt.Errorf("failed to run 'go mod edit -replace': %v with output: %v", err, output)
+				return nil, fmt.Errorf("failed to run 'go mod edit -replace': %v for package %s/%s@%s with output: %v", err, pkg.OldName, pkg.Name, pkg.Version, output)
 			}
 		}
 	}
