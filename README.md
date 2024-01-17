@@ -4,7 +4,7 @@ GoBump is a simple command-line tool written in Go that allows you to update the
 ## Usage
 
 ```shell
-gobump --packages=<package@version>,...--modroot=<path to go mod>
+gobump --packages=<package@version>,... --modroot=<path to go.mod>
 ```
 
 **NOTE**: This tool does not run `go mod tidy` at the end, you must run that yourself.
