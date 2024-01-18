@@ -30,7 +30,7 @@ var rootCmd = &cobra.Command{
 	// has an action associated with it:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if rootFlags.packages == "" && rootFlags.replaces == "" {
-			return fmt.Errorf("Error: No packages or replaces provided. Usage: gobump --packages=\"<package1@version> <package2@version> ...--replaces <package3=package4@version>... \"")
+			return fmt.Errorf("Error: No packages or replaces provided. Usage: gobump --packages=\"<package1@version> <package2@version> ...\" --replaces=\"<package3=package4@version> ...\"")
 		}
 		packages := strings.Split(rootFlags.packages, " ")
 		pkgVersions := map[string]*types.Package{}
