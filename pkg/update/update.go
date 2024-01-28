@@ -84,7 +84,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 	// Run go mod tidy before
 	if cfg.Tidy {
-		output, err := run.GoModTidy(cfg.Modroot, goVersion)
+		output, err := run.GoModTidy(cfg.Modroot, goVersion, cfg.TidyCompat)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}
@@ -132,7 +132,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 
 	// Run go mod tidy
 	if cfg.Tidy {
-		output, err := run.GoModTidy(cfg.Modroot, goVersion)
+		output, err := run.GoModTidy(cfg.Modroot, goVersion, cfg.TidyCompat)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go mod tidy': %v with output: %v", err, output)
 		}

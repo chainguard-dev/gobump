@@ -9,8 +9,9 @@ type Package struct {
 }
 
 type Config struct {
-	Modroot   string
-	GoVersion string
-	ShowDiff  bool
-	Tidy      bool
+	Modroot    string
+	GoVersion  string
+	ShowDiff   bool
+	Tidy       bool
+	TidyCompat string
 }
