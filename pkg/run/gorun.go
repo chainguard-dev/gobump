@@ -10,7 +10,7 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
-func GoModTidy(modroot, goVersion string) (string, error) {
+func GoModTidy(modroot, goVersion, compat string) (string, error) {
 	if goVersion == "" {
 		cmd := exec.Command("go", "env", "GOVERSION")
 		cmd.Stderr = os.Stderr
@@ -25,7 +25,13 @@ func GoModTidy(modroot, goVersion string) (string, error) {
 	}
 
 	log.Printf("Running go mod tidy with go version '%s' ...\n", goVersion)
-	cmd := exec.Command("go", "mod", "tidy", "-go", goVersion)
+	args := []string{"mod", "tidy", "-go", goVersion}
+	if compat != "" {
+		log.Printf("Running go mod tidy with compat '%s' ...\n", compat)
+		args = append(args, "-compat", compat)
+	}
+
+	cmd := exec.Command("go", args...)
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
 		return strings.TrimSpace(string(bytes)), err
