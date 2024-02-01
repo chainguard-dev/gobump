@@ -40,7 +40,7 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				}
 				if semver.IsValid(pkgVersions[replace.New.Path].Version) {
 					if semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version)
+						fmt.Printf("WARNING: package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version)
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[replace.New.Path].Version)
