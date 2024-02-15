@@ -58,7 +58,7 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				// In that case, skip the compare check.
 				if semver.IsValid(pkgVersions[require.Mod.Path].Version) {
 					if semver.Compare(require.Mod.Version, pkgVersions[require.Mod.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", require.Mod.Path, require.Mod.Version, pkgVersions[require.Mod.Path].Version)
+						return fmt.Errorf("package %s with version '%s' is already at version %s", require.Mod.Path, pkgVersions[require.Mod.Path].Version, require.Mod.Version)
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[require.Mod.Path].Version)
