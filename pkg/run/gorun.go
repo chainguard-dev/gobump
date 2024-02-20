@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	versionutil "k8s.io/apimachinery/pkg/util/version"
@@ -36,6 +37,52 @@ func GoModTidy(modroot, goVersion, compat string) (string, error) {
 	if bytes, err := cmd.CombinedOutput(); err != nil {
 		return strings.TrimSpace(string(bytes)), err
 	}
+	return "", nil
+}
+
+func findWorkspaceFile(dir string) (root string) {
+	dir = filepath.Clean(dir)
+	// Look for enclosing go.mod.
+	for {
+		f := filepath.Join(dir, "go.work")
+		if fi, err := os.Stat(f); err == nil && !fi.IsDir() {
+			return f
+		}
+		d := filepath.Dir(dir)
+		if d == dir {
+			break
+		}
+		dir = d
+	}
+	return ""
+}
+
+func findGoWork(modroot string) string {
+	switch gowork := os.Getenv("GOWORK"); gowork {
+	case "off":
+		return ""
+	case "", "auto":
+		return findWorkspaceFile(modroot)
+	default:
+		return gowork
+	}
+}
+
+func GoVendor(dir string) (string, error) {
+	if findGoWork(dir) == "" {
+		log.Print("Running go mod vendor...")
+		cmd := exec.Command("go", "mod", "vendor")
+		if bytes, err := cmd.CombinedOutput(); err != nil {
+			return strings.TrimSpace(string(bytes)), err
+		}
+	} else {
+		log.Print("Running go work vendor...")
+		cmd := exec.Command("go", "work", "vendor")
+		if bytes, err := cmd.CombinedOutput(); err != nil {
+			return strings.TrimSpace(string(bytes)), err
+		}
+	}
+
 	return "", nil
 }
 
