@@ -264,3 +264,30 @@ func copyFile(t *testing.T, src, dst string) {
 		t.Fatal(err)
 	}
 }
+
+func TestParseGoVersionString(t *testing.T) {
+	tests := []struct {
+		name          string
+		versionOutput string
+		want          string
+		wantErr       bool
+	}{
+		{"valid version 1.15.2", "go version go1.15.2 linux/amd64", "1.15.2", false},
+		{"valid version 1.21.6", "go version go1.21.6 darwin/arm64", "1.21.6", false},
+		{"go not found", "sh: go: not found", "", true},
+		{"unexpected format", "unexpected format string", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseGoVersionString(tt.versionOutput)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseGoVersionString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("parseGoVersionString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

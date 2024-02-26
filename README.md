@@ -12,7 +12,7 @@ gobump --packages=<package@version> ... --modroot=<path to go.mod>
 * `--packages`: A space-separated list of packages to update. Each package should be in the format `package@version`.
 * `--modroot`: Path to the go.mod root. If not specified, it defaults to the current directory.
 * `--replaces`: A space-separated list of packages to replace. Each entry should be in the format `old=new@version`.
-* `--go-version`: set the go-version for 'go mod tidy' command.
+* `--go-version`: set the go-version for 'go mod tidy' command, default to the go version in the build environment.
 * `--show-diff`: Show the difference between the original and 'go.mod' files.
 * `--tidy`:  Run 'go mod tidy' command.
  

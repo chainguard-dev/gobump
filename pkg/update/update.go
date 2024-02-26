@@ -1,10 +1,13 @@
 package update
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/chainguard-dev/gobump/pkg/run"
 	"github.com/chainguard-dev/gobump/pkg/types"
@@ -71,16 +74,9 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 }
 
 func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfile.File, error) {
-	modpath := path.Join(cfg.Modroot, "go.mod")
-
-	goVersion := cfg.GoVersion
-	if goVersion == "" {
-		// Read the go version from go.mod file and use that one
-		modFile, _, err := ParseGoModfile(modpath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
-		}
-		goVersion = modFile.Go.Version
+	goVersion, err := getGoVersionFromEnvironment()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the go version from the local system: %v", err)
 	}
 	// Run go mod tidy before
 	if cfg.Tidy {
@@ -91,6 +87,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 
 	// Read the entire go.mod one more time into memory and check that all the version constraints are met.
+	modpath := path.Join(cfg.Modroot, "go.mod")
 	modFile, content, err := ParseGoModfile(modpath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse the go mod file with error: %v", err)
@@ -187,4 +184,30 @@ func getVersion(modFile *modfile.File, packageName string) string {
 	}
 
 	return ""
+}
+
+// getGoVersionFromEnvironment returns the Go version from the local environment.
+func getGoVersionFromEnvironment() (string, error) {
+	cmd := exec.Command("go", "version")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("failed to execute 'go version': %v", err)
+	}
+	versionOutput := out.String()
+	return parseGoVersionString(versionOutput)
+}
+
+// parseGoVersionString parses the output of `go version` command and extracts the Go version.
+func parseGoVersionString(versionOutput string) (string, error) {
+	parts := strings.Fields(versionOutput)
+	if len(parts) < 3 || !strings.HasPrefix(parts[2], "go") {
+		return "", fmt.Errorf("unexpected format of 'go version' output")
+	}
+
+	// Remove the "go" prefix from the version
+	goVersion := strings.TrimPrefix(parts[2], "go")
+	log.Println("Local Go version:", goVersion)
+	return goVersion, nil
 }
