@@ -6,6 +6,7 @@ type Package struct {
 	Version string
 	Replace bool
 	Require bool
+	Index   int
 }
 
 type Config struct {

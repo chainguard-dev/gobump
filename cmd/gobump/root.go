@@ -35,7 +35,7 @@ var rootCmd = &cobra.Command{
 		}
 		packages := strings.Split(rootFlags.packages, " ")
 		pkgVersions := map[string]*types.Package{}
-		for _, pkg := range packages {
+		for i, pkg := range packages {
 			parts := strings.Split(pkg, "@")
 			if len(parts) != 2 {
 				return fmt.Errorf("Error: Invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
@@ -43,13 +43,14 @@ var rootCmd = &cobra.Command{
 			pkgVersions[parts[0]] = &types.Package{
 				Name:    parts[0],
 				Version: parts[1],
+				Index:   i,
 			}
 		}
 
 		var replaces []string
 		if len(rootFlags.replaces) != 0 {
 			replaces = strings.Split(rootFlags.replaces, " ")
-			for _, replace := range replaces {
+			for i, replace := range replaces {
 				parts := strings.Split(replace, "=")
 				if len(parts) != 2 {
 					return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
@@ -65,6 +66,7 @@ var rootCmd = &cobra.Command{
 					Name:    rep[0],
 					Version: rep[1],
 					Replace: true,
+					Index:   i,
 				}
 			}
 		}

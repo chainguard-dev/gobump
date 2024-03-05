@@ -2,6 +2,7 @@ package update
 
 import (
 	"os/exec"
+	"reflect"
 	"testing"
 
 	"github.com/chainguard-dev/gobump/pkg/types"
@@ -53,6 +54,54 @@ func TestUpdate(t *testing.T) {
 				if got := getVersion(modFile, pkg); got != want {
 					t.Errorf("expected %s, got %s", want, got)
 				}
+			}
+		})
+	}
+}
+
+func TestUpdateInOrder(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pkgVersions map[string]*types.Package
+		want        []string
+	}{
+		{
+			name: "standard update",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.4.0",
+					Index:   0,
+				},
+				"k8s.io/api": {
+					OldName: "k8s.io/api",
+					Name:    "k8s.io/api",
+					Version: "v0.28.0",
+					Index:   2,
+				},
+				"k8s.io/client-go": {
+					OldName: "k8s.io/client-go",
+					Name:    "k8s.io/client-go",
+					Version: "v0.28.0",
+					Index:   1,
+				},
+			},
+			want: []string{
+				"github.com/google/uuid",
+				"k8s.io/api",
+				"k8s.io/client-go",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
+
+			got := orderPkgVersionsMap(tc.pkgVersions)
+			if len(got) != len(tc.want) || reflect.DeepEqual(got, tc.want) {
+				t.Errorf("expected %s, got %s", tc.want, got)
 			}
 		})
 	}
