@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/chainguard-dev/gobump/pkg/run"
@@ -99,8 +100,11 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 		return nil, err
 	}
 
+	depsBumpOrdered := orderPkgVersionsMap(pkgVersions)
+
 	// Replace the packages first.
-	for k, pkg := range pkgVersions {
+	for _, k := range depsBumpOrdered {
+		pkg := pkgVersions[k]
 		if pkg.Replace {
 			log.Printf("Update package: %s\n", k)
 			log.Println("Running go mod edit replace ...")
@@ -109,8 +113,9 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 			}
 		}
 	}
-	// Bump the require or new get packages.
-	for k, pkg := range pkgVersions {
+	// Bump the require or new get packages in the specified order.
+	for _, k := range depsBumpOrdered {
+		pkg := pkgVersions[k]
 		// Skip the replace that have been updated above
 		if !pkg.Replace {
 			log.Printf("Update package: %s\n", k)
@@ -164,6 +169,17 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 
 	return newModFile, nil
+}
+
+func orderPkgVersionsMap(pkgVersions map[string]*types.Package) []string {
+	depsBumpOrdered := make([]string, 0, len(pkgVersions))
+	for repo := range pkgVersions {
+		depsBumpOrdered = append(depsBumpOrdered, repo)
+	}
+	sort.SliceStable(depsBumpOrdered, func(i, j int) bool {
+		return pkgVersions[depsBumpOrdered[i]].Index < pkgVersions[depsBumpOrdered[j]].Index
+	})
+	return depsBumpOrdered
 }
 
 func getVersion(modFile *modfile.File, packageName string) string {
