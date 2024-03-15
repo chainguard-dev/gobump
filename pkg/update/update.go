@@ -75,10 +75,14 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 }
 
 func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfile.File, error) {
-	goVersion, err := getGoVersionFromEnvironment()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the go version from the local system: %v", err)
+	var err error
+	goVersion := cfg.GoVersion
+	if goVersion == "" {
+		if goVersion, err = getGoVersionFromEnvironment(); err != nil {
+			return nil, fmt.Errorf("failed to get the Go version from the local system: %v", err)
+		}
 	}
+
 	// Run go mod tidy before
 	if cfg.Tidy {
 		output, err := run.GoModTidy(cfg.Modroot, goVersion, cfg.TidyCompat)
