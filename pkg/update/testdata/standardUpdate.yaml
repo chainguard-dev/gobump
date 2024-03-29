@@ -1,0 +1,3 @@
+packages:
+  - name: "github.com/google/uuid"
+    version: "v1.4.0"

@@ -1,0 +1,3 @@
+packages:
+  - name: github.com/NVIDIA/go-nvml
+    version: "c3a16a2b07cf2251cbedb76fa68c9292b22bfa06"

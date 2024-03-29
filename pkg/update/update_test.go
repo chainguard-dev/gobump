@@ -8,10 +8,24 @@ import (
 	"github.com/chainguard-dev/gobump/pkg/types"
 )
 
+// maybeParseFile will parse the file if the filename is not empty
+// On failure, fatals to simplify the error handling in tests.
+func maybeParseFile(t *testing.T, fileName string, packages map[string]*types.Package) map[string]*types.Package {
+	if fileName != "" {
+		ret, err := types.ParseFile(fileName)
+		if err != nil {
+			t.Fatalf("Failed to parse file %q: %v", fileName, err)
+		}
+		return ret
+	}
+	return packages
+}
+
 func TestUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
 		pkgVersions map[string]*types.Package
+		fileName    string
 		want        map[string]string
 	}{
 		{
@@ -22,6 +36,13 @@ func TestUpdate(t *testing.T) {
 					Version: "v1.4.0",
 				},
 			},
+			want: map[string]string{
+				"github.com/google/uuid": "v1.4.0",
+			},
+		},
+		{
+			name:     "standard update - from file",
+			fileName: "testdata/standardUpdate.yaml",
 			want: map[string]string{
 				"github.com/google/uuid": "v1.4.0",
 			},
@@ -39,14 +60,21 @@ func TestUpdate(t *testing.T) {
 				"k8s.io/client-go": "v0.28.0",
 			},
 		},
+		{
+			name:     "replace - from file",
+			fileName: "testdata/standardReplace.yaml",
+			want: map[string]string{
+				"k8s.io/client-go": "v0.28.0",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
-
-			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
+			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -63,6 +91,7 @@ func TestUpdateInOrder(t *testing.T) {
 	testCases := []struct {
 		name        string
 		pkgVersions map[string]*types.Package
+		fileName    string
 		want        []string
 	}{
 		{
@@ -92,6 +121,15 @@ func TestUpdateInOrder(t *testing.T) {
 				"k8s.io/client-go",
 			},
 		},
+		{
+			name:     "standard update - file",
+			fileName: "testdata/inorder.yaml",
+			want: []string{
+				"github.com/google/uuid",
+				"k8s.io/api",
+				"k8s.io/client-go",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -99,7 +137,8 @@ func TestUpdateInOrder(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			got := orderPkgVersionsMap(tc.pkgVersions)
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
+			got := orderPkgVersionsMap(pkgVersions)
 			if len(got) != len(tc.want) || reflect.DeepEqual(got, tc.want) {
 				t.Errorf("expected %s, got %s", tc.want, got)
 			}
@@ -111,6 +150,7 @@ func TestGoModTidy(t *testing.T) {
 	testCases := []struct {
 		name        string
 		pkgVersions map[string]*types.Package
+		fileName    string
 		want        map[string]string
 	}{
 		{
@@ -125,6 +165,13 @@ func TestGoModTidy(t *testing.T) {
 				"github.com/sirupsen/logrus": "v1.9.0",
 			},
 		},
+		{
+			name:     "standard update - file",
+			fileName: "testdata/logrus.yaml",
+			want: map[string]string{
+				"github.com/sirupsen/logrus": "v1.9.0",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -134,7 +181,8 @@ func TestGoModTidy(t *testing.T) {
 			copyFile(t, "testdata/hello/go.sum", tmpdir)
 			copyFile(t, "testdata/hello/main.go", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
+			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,6 +199,7 @@ func TestReplaceAndRequire(t *testing.T) {
 	testCases := []struct {
 		name        string
 		pkgVersions map[string]*types.Package
+		fileName    string
 		want        map[string]string
 	}{
 		{
@@ -165,6 +214,13 @@ func TestReplaceAndRequire(t *testing.T) {
 				"github.com/sirupsen/logrus": "v1.9.0",
 			},
 		},
+		{
+			name:     "standard update - file",
+			fileName: "testdata/logrus.yaml",
+			want: map[string]string{
+				"github.com/sirupsen/logrus": "v1.9.0",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -174,7 +230,8 @@ func TestReplaceAndRequire(t *testing.T) {
 			copyFile(t, "testdata/bye/go.sum", tmpdir)
 			copyFile(t, "testdata/bye/main.go", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
+			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -191,6 +248,7 @@ func TestUpdateError(t *testing.T) {
 	testCases := []struct {
 		name        string
 		pkgVersions map[string]*types.Package
+		fileName    string
 	}{
 		{
 			name: "no downgrade",
@@ -201,6 +259,10 @@ func TestUpdateError(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "no downgrade - from file",
+			fileName: "testdata/nodowngrade.yaml",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -208,7 +270,8 @@ func TestUpdateError(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			_, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
+			_, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -217,33 +280,49 @@ func TestUpdateError(t *testing.T) {
 }
 
 func TestReplaces(t *testing.T) {
-	tmpdir := t.TempDir()
-	copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
-
-	replaces := map[string]*types.Package{
-		"github.com/google/gofuzz": {
-			OldName: "github.com/google/gofuzz",
-			Name:    "github.com/fakefuzz",
-			Version: "v1.2.3",
-			Replace: true,
-		}}
-
-	modFile, err := DoUpdate(replaces, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
-	if err != nil {
-		t.Fatal(err)
+	testCases := []struct {
+		name     string
+		replaces map[string]*types.Package
+		fileName string
+	}{
+		{
+			name: "replace",
+			replaces: map[string]*types.Package{
+				"github.com/google/gofuzz": {
+					OldName: "github.com/google/gofuzz",
+					Name:    "github.com/fakefuzz",
+					Version: "v1.2.3",
+					Replace: true,
+				}},
+		},
+		{
+			name:     "replace - from file",
+			fileName: "testdata/replaces.yaml",
+		},
 	}
-	for _, r := range modFile.Replace {
-		if r.Old.Path == "github.com/google/gofuzz" {
-			if r.New.Path != "github.com/fakefuzz" {
-				t.Errorf("expected replace of github.com/google/gofuzz with github.com/fakefuzz, got %s", r.New.Path)
+
+	for _, tc := range testCases {
+		tmpdir := t.TempDir()
+		copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
+
+		replaces := maybeParseFile(t, tc.fileName, tc.replaces)
+		modFile, err := DoUpdate(replaces, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, r := range modFile.Replace {
+			if r.Old.Path == "github.com/google/gofuzz" {
+				if r.New.Path != "github.com/fakefuzz" {
+					t.Errorf("expected replace of github.com/google/gofuzz with github.com/fakefuzz, got %s", r.New.Path)
+				}
+				if r.Old.Path != "github.com/google/gofuzz" {
+					t.Errorf("expected replace of github.com/google/gofuzz, got %s", r.Old.Path)
+				}
+				if r.New.Version != "v1.2.3" {
+					t.Errorf("expected replace of github.com/google/gofuzz with v1.2.3, got %s", r.New.Version)
+				}
+				break
 			}
-			if r.Old.Path != "github.com/google/gofuzz" {
-				t.Errorf("expected replace of github.com/google/gofuzz, got %s", r.Old.Path)
-			}
-			if r.New.Version != "v1.2.3" {
-				t.Errorf("expected replace of github.com/google/gofuzz with v1.2.3, got %s", r.New.Version)
-			}
-			break
 		}
 	}
 }
@@ -261,20 +340,39 @@ func TestCommit(t *testing.T) {
 	newerVersion := "v0.12.0-1"
 
 	testCases := []struct {
-		name    string
-		version string
-		want    map[string]string
+		name        string
+		pkgVersions map[string]*types.Package
+		fileName    string
+		want        map[string]string
 	}{
 		{
-			name:    "pin to older",
-			version: olderCommit,
+			name: "pin to older",
+			pkgVersions: map[string]*types.Package{
+				pkg: {Name: pkg, Version: olderCommit},
+			},
 			want: map[string]string{
 				pkg: olderVersion,
 			},
 		},
 		{
-			name:    "pin to newer",
-			version: newerCommit,
+			name:     "pin to older - file",
+			fileName: "testdata/older.yaml",
+			want: map[string]string{
+				pkg: olderVersion,
+			},
+		},
+		{
+			name: "pin to newer",
+			pkgVersions: map[string]*types.Package{
+				pkg: {Name: pkg, Version: newerCommit},
+			},
+			want: map[string]string{
+				pkg: newerVersion,
+			},
+		},
+		{
+			name:     "pin to newer - file",
+			fileName: "testdata/newer.yaml",
 			want: map[string]string{
 				pkg: newerVersion,
 			},
@@ -286,12 +384,7 @@ func TestCommit(t *testing.T) {
 			tmpdir := t.TempDir()
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
-			pkgVersions := map[string]*types.Package{
-				pkg: {
-					Name:    pkg,
-					Version: tc.version,
-				},
-			}
+			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
 			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: "1.21"})
 			if err != nil {
 				t.Fatal(err)

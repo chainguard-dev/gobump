@@ -15,14 +15,33 @@ gobump --packages=<package@version> ... --modroot=<path to go.mod>
 * `--go-version`: set the go-version for 'go mod tidy' command, default to the go version in the build environment.
 * `--show-diff`: Show the difference between the original and 'go.mod' files.
 * `--tidy`:  Run 'go mod tidy' command.
- 
+* `--bump-file`: Specify the yaml file where to read the bump instructions from
+
 ## Example
+
+### Using flags
 
 ```shell
 gobump --packages="github.com/pkg/errors@v0.9.1 golang.org/x/mod@v0.4.2" --modroot=/path/to/your/project
 ```
 
 This will update the versions of `github.com/pkg/errors` and `golang.org/x/mod` in your `go.mod` file.
+
+### Using file
+
+Create a file `bumps.yaml`
+
+```yaml
+packages:
+  - name: github.com/pkg/errors
+    version: v0.9.1
+  - name: golang.org/x/mod
+    version: v0.4.2
+```
+
+And it does the same as above flags. You can also specify `replace` and
+`require` in the yaml fields. Some [examples](./pkg/update/testdata/).
+**Note** Index field is not used.
 
 ## Requirements
 
