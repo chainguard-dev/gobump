@@ -12,6 +12,7 @@ import (
 
 type rootCLIFlags struct {
 	packages   string
+	bumpFile   string
 	modroot    string
 	replaces   string
 	goVersion  string
@@ -30,43 +31,59 @@ var rootCmd = &cobra.Command{
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if rootFlags.packages == "" && rootFlags.replaces == "" {
-			return fmt.Errorf("Error: No packages or replaces provided. Usage: gobump --packages=\"<package1@version> <package2@version> ...\" --replaces=\"<package3=package4@version> ...\"")
-		}
-		packages := strings.Split(rootFlags.packages, " ")
-		pkgVersions := map[string]*types.Package{}
-		for i, pkg := range packages {
-			parts := strings.Split(pkg, "@")
-			if len(parts) != 2 {
-				return fmt.Errorf("Error: Invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
-			}
-			pkgVersions[parts[0]] = &types.Package{
-				Name:    parts[0],
-				Version: parts[1],
-				Index:   i,
-			}
+		if rootFlags.packages == "" && rootFlags.replaces == "" && rootFlags.bumpFile == "" {
+			return fmt.Errorf("Error: No packages or replaces provided. Use --packages or --replaces or --bump-file")
 		}
 
-		var replaces []string
-		if len(rootFlags.replaces) != 0 {
-			replaces = strings.Split(rootFlags.replaces, " ")
-			for i, replace := range replaces {
-				parts := strings.Split(replace, "=")
+		if rootFlags.packages != "" && rootFlags.bumpFile != "" {
+			return fmt.Errorf("Error: Both --packages and --bump-file flags are provided. Use only one")
+		}
+
+		if rootFlags.replaces != "" && rootFlags.bumpFile != "" {
+			return fmt.Errorf("Error: Both --replaces and --bump-file flags are provided. Use only one")
+		}
+
+		pkgVersions := map[string]*types.Package{}
+		if rootFlags.bumpFile != "" {
+			var err error
+			pkgVersions, err = types.ParseFile(rootFlags.bumpFile)
+			if err != nil {
+				return fmt.Errorf("failed to parse bump file %q: %v", rootFlags.bumpFile, err)
+			}
+		} else {
+			packages := strings.Split(rootFlags.packages, " ")
+			for i, pkg := range packages {
+				parts := strings.Split(pkg, "@")
 				if len(parts) != 2 {
-					return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
+					return fmt.Errorf("Error: Invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
 				}
-				// extract the new package name and version
-				rep := strings.Split(strings.TrimPrefix(replace, fmt.Sprintf("%s=", parts[0])), "@")
-				if len(rep) != 2 {
-					return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
-				}
-				// Merge/Add the packages to replace reusing the initial list of packages
-				pkgVersions[rep[0]] = &types.Package{
-					OldName: parts[0],
-					Name:    rep[0],
-					Version: rep[1],
-					Replace: true,
+				pkgVersions[parts[0]] = &types.Package{
+					Name:    parts[0],
+					Version: parts[1],
 					Index:   i,
+				}
+			}
+
+			if len(rootFlags.replaces) != 0 {
+				replaces := strings.Split(rootFlags.replaces, " ")
+				for i, replace := range replaces {
+					parts := strings.Split(replace, "=")
+					if len(parts) != 2 {
+						return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
+					}
+					// extract the new package name and version
+					rep := strings.Split(strings.TrimPrefix(replace, fmt.Sprintf("%s=", parts[0])), "@")
+					if len(rep) != 2 {
+						return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
+					}
+					// Merge/Add the packages to replace reusing the initial list of packages
+					pkgVersions[rep[0]] = &types.Package{
+						OldName: parts[0],
+						Name:    rep[0],
+						Version: rep[1],
+						Replace: true,
+						Index:   i,
+					}
 				}
 			}
 		}
@@ -89,6 +106,7 @@ func init() {
 
 	flagSet := rootCmd.Flags()
 	flagSet.StringVar(&rootFlags.packages, "packages", "", "A space-separated list of packages to update")
+	flagSet.StringVar(&rootFlags.bumpFile, "bump-file", "", "Filename containing the list of packages to update / replace")
 	flagSet.StringVar(&rootFlags.modroot, "modroot", "", "path to the go.mod root")
 	flagSet.StringVar(&rootFlags.replaces, "replaces", "", "A space-separated list of packages to replace")
 	flagSet.BoolVar(&rootFlags.tidy, "tidy", false, "Run 'go mod tidy' command")

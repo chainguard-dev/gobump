@@ -1,0 +1,5 @@
+packages:
+  - oldName: "github.com/google/gofuzz"
+    name:    "github.com/fakefuzz"
+    version: "v1.2.3"
+    replace: true
