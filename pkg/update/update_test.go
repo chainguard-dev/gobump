@@ -152,6 +152,8 @@ func TestGoModTidy(t *testing.T) {
 		pkgVersions map[string]*types.Package
 		fileName    string
 		want        map[string]string
+		wantErr     bool
+		errMsg      string
 	}{
 		{
 			name: "standard update",
@@ -171,6 +173,16 @@ func TestGoModTidy(t *testing.T) {
 			want: map[string]string{
 				"github.com/sirupsen/logrus": "v1.9.0",
 			},
+		}, {
+			name: "error when bumping main module",
+			pkgVersions: map[string]*types.Package{
+				"github.com/puerco/hello": {
+					Name:    "github.com/puerco/hello",
+					Version: "v1.9.0",
+				},
+			},
+			wantErr: true,
+			errMsg:  "bumping the main module is not allowed 'github.com/puerco/hello'",
 		},
 	}
 
@@ -183,8 +195,12 @@ func TestGoModTidy(t *testing.T) {
 
 			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
 			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
-			if err != nil {
-				t.Fatal(err)
+			if (err != nil) != tc.wantErr {
+				t.Errorf("DoUpdate() error = %v, wantErr %v", err, tc.wantErr)
+				return
+			}
+			if tc.wantErr && err.Error() != tc.errMsg {
+				t.Errorf("expected err message %s, got %s", tc.errMsg, err.Error())
 			}
 			for pkg, want := range tc.want {
 				if got := getVersion(modFile, pkg); got != want {

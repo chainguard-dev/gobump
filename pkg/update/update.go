@@ -31,6 +31,9 @@ func ParseGoModfile(path string) (*modfile.File, []byte, error) {
 }
 
 func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.File) error {
+	if _, ok := pkgVersions[modFile.Module.Mod.Path]; ok {
+		return fmt.Errorf("bumping the main module is not allowed '%s'", modFile.Module.Mod.Path)
+	}
 	// Detect if the list of packages contain any replace statement for the package, if so we might drop that replace with a new one.
 	for _, replace := range modFile.Replace {
 		if replace != nil {
