@@ -15,6 +15,7 @@ gobump --packages=<package@version> ... --modroot=<path to go.mod>
 * `--go-version`: set the go-version for 'go mod tidy' command, default to the go version in the build environment.
 * `--show-diff`: Show the difference between the original and 'go.mod' files.
 * `--tidy`:  Run 'go mod tidy' command.
+* `--skip-initial-tidy`: Skip the initial 'go mod tidy' command before updating and replacing the packages.
 * `--bump-file`: Specify the yaml file where to read the bump instructions from
 
 ## Example
