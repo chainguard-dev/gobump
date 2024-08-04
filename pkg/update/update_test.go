@@ -3,6 +3,7 @@ package update
 import (
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/chainguard-dev/gobump/pkg/types"
@@ -201,6 +202,76 @@ func TestGoModTidy(t *testing.T) {
 			}
 			if tc.wantErr && err.Error() != tc.errMsg {
 				t.Errorf("expected err message %s, got %s", tc.errMsg, err.Error())
+			}
+			for pkg, want := range tc.want {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("expected %s, got %s", want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestGoModTidySkipInitial(t *testing.T) {
+	testCases := []struct {
+		name            string
+		pkgVersions     map[string]*types.Package
+		tidySkipInitial bool
+		wantError       bool
+		want            map[string]string
+		errMsgContains  string
+	}{
+		{
+			name: "do not skip initial tidy",
+			pkgVersions: map[string]*types.Package{
+				"github.com/coreos/etcd": {
+					Name:    "github.com/coreos/etcd",
+					Version: "v3.3.15",
+				},
+				"google.golang.org/grpc": {
+					Name:    "google.golang.org/grpc",
+					OldName: "google.golang.org/grpc",
+					Version: "v1.29.0",
+					Replace: true,
+				},
+			},
+			tidySkipInitial: false,
+			wantError:       true,
+			errMsgContains:  "ambiguous import",
+		},
+		{
+			name: "skip initial tidy",
+			pkgVersions: map[string]*types.Package{
+				"github.com/coreos/etcd": {
+					Name:    "github.com/coreos/etcd",
+					Version: "v3.3.15",
+				},
+				"google.golang.org/grpc": {
+					Name:    "google.golang.org/grpc",
+					OldName: "google.golang.org/grpc",
+					Version: "v1.29.0",
+					Replace: true,
+				},
+			},
+			tidySkipInitial: true,
+			wantError:       true,
+			errMsgContains:  "Please remove the package or add it to the list of 'replaces'",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpdir := t.TempDir()
+			copyFile(t, "testdata/confd/go.mod", tmpdir)
+			copyFile(t, "testdata/confd/go.sum", tmpdir)
+
+			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: true, GoVersion: "", TidySkipInitial: tc.tidySkipInitial})
+			if (err != nil) != tc.wantError {
+				t.Errorf("DoUpdate() error = %v, wantErr %v", err, tc.wantError)
+				return
+			}
+			if tc.wantError && !strings.Contains(err.Error(), tc.errMsgContains) {
+				t.Errorf("expected err message not contains %s, got %s", tc.errMsgContains, err.Error())
 			}
 			for pkg, want := range tc.want {
 				if got := getVersion(modFile, pkg); got != want {
