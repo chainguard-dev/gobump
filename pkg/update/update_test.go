@@ -265,7 +265,7 @@ func TestGoModTidySkipInitial(t *testing.T) {
 			copyFile(t, "testdata/confd/go.mod", tmpdir)
 			copyFile(t, "testdata/confd/go.sum", tmpdir)
 
-			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: true, GoVersion: "", TidySkipInitial: tc.tidySkipInitial})
+			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: true, GoVersion: "1.19", TidySkipInitial: tc.tidySkipInitial})
 			if (err != nil) != tc.wantError {
 				t.Errorf("DoUpdate() error = %v, wantErr %v", err, tc.wantError)
 				return
