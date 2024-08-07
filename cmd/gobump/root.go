@@ -11,14 +11,15 @@ import (
 )
 
 type rootCLIFlags struct {
-	packages   string
-	bumpFile   string
-	modroot    string
-	replaces   string
-	goVersion  string
-	tidy       bool
-	showDiff   bool
-	tidyCompat string
+	packages        string
+	bumpFile        string
+	modroot         string
+	replaces        string
+	goVersion       string
+	tidy            bool
+	skipInitialTidy bool
+	showDiff        bool
+	tidyCompat      string
 }
 
 var rootFlags rootCLIFlags
@@ -88,7 +89,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat}); err != nil {
+		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy}); err != nil {
 			return fmt.Errorf("Failed to running update. Error: %v", err)
 		}
 		return nil
@@ -110,6 +111,7 @@ func init() {
 	flagSet.StringVar(&rootFlags.modroot, "modroot", "", "path to the go.mod root")
 	flagSet.StringVar(&rootFlags.replaces, "replaces", "", "A space-separated list of packages to replace")
 	flagSet.BoolVar(&rootFlags.tidy, "tidy", false, "Run 'go mod tidy' command")
+	flagSet.BoolVar(&rootFlags.skipInitialTidy, "skip-initial-tidy", false, "Skip running 'go mod tidy' command before updating the go.mod file")
 	flagSet.BoolVar(&rootFlags.showDiff, "show-diff", false, "Show the difference between the original and 'go.mod' files")
 	flagSet.StringVar(&rootFlags.goVersion, "go-version", "", "set the go-version for go-mod-tidy")
 	flagSet.StringVar(&rootFlags.tidyCompat, "compat", "", "set the go version for which the tidied go.mod and go.sum files should be compatible")

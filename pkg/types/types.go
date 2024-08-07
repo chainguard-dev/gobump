@@ -10,11 +10,12 @@ type Package struct {
 }
 
 type Config struct {
-	Modroot    string
-	GoVersion  string
-	ShowDiff   bool
-	Tidy       bool
-	TidyCompat string
+	Modroot         string
+	GoVersion       string
+	ShowDiff        bool
+	Tidy            bool
+	TidyCompat      string
+	TidySkipInitial bool
 }
 
 // Used to marshal from yaml/json file to get the list of packages
