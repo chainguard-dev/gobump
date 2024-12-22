@@ -24,24 +24,22 @@ type rootCLIFlags struct {
 
 var rootFlags rootCLIFlags
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "gobump",
 	Short: "gobump cli",
 	Args:  cobra.NoArgs,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if rootFlags.packages == "" && rootFlags.replaces == "" && rootFlags.bumpFile == "" {
-			return fmt.Errorf("Error: No packages or replaces provided. Use --packages or --replaces or --bump-file")
+			return fmt.Errorf("no packages or replaces provided. Use --packages or --replaces or --bump-file")
 		}
 
 		if rootFlags.packages != "" && rootFlags.bumpFile != "" {
-			return fmt.Errorf("Error: Both --packages and --bump-file flags are provided. Use only one")
+			return fmt.Errorf("both --packages and --bump-file flags are provided. Use only one")
 		}
 
 		if rootFlags.replaces != "" && rootFlags.bumpFile != "" {
-			return fmt.Errorf("Error: Both --replaces and --bump-file flags are provided. Use only one")
+			return fmt.Errorf("both --replaces and --bump-file flags are provided. Use only one")
 		}
 
 		pkgVersions := map[string]*types.Package{}
@@ -56,7 +54,7 @@ var rootCmd = &cobra.Command{
 			for i, pkg := range packages {
 				parts := strings.Split(pkg, "@")
 				if len(parts) != 2 {
-					return fmt.Errorf("Error: Invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
+					return fmt.Errorf("invalid package format. Each package should be in the format <package@version>. Usage: gobump --packages=\"<package1@version> <package2@version> ...\"")
 				}
 				pkgVersions[parts[0]] = &types.Package{
 					Name:    parts[0],
@@ -70,12 +68,12 @@ var rootCmd = &cobra.Command{
 				for i, replace := range replaces {
 					parts := strings.Split(replace, "=")
 					if len(parts) != 2 {
-						return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
+						return fmt.Errorf("invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
 					}
 					// extract the new package name and version
 					rep := strings.Split(strings.TrimPrefix(replace, fmt.Sprintf("%s=", parts[0])), "@")
 					if len(rep) != 2 {
-						return fmt.Errorf("Error: Invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
+						return fmt.Errorf("invalid replace format. Each replace should be in the format <oldpackage=newpackage@version>. Usage: gobump -replaces=\"<oldpackage=newpackage@version> ...\"")
 					}
 					// Merge/Add the packages to replace reusing the initial list of packages
 					pkgVersions[rep[0]] = &types.Package{
@@ -90,7 +88,7 @@ var rootCmd = &cobra.Command{
 		}
 
 		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy}); err != nil {
-			return fmt.Errorf("Failed to running update. Error: %v", err)
+			return fmt.Errorf("failed to run update. Error: %v", err)
 		}
 		return nil
 	},
