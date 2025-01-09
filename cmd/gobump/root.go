@@ -50,7 +50,7 @@ var rootCmd = &cobra.Command{
 				return fmt.Errorf("failed to parse bump file %q: %v", rootFlags.bumpFile, err)
 			}
 		} else {
-			packages := strings.Split(rootFlags.packages, " ")
+			packages := strings.Fields(rootFlags.packages)
 			for i, pkg := range packages {
 				parts := strings.Split(pkg, "@")
 				if len(parts) != 2 {
@@ -64,7 +64,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			if len(rootFlags.replaces) != 0 {
-				replaces := strings.Split(rootFlags.replaces, " ")
+				replaces := strings.Fields(rootFlags.replaces)
 				for i, replace := range replaces {
 					parts := strings.Split(replace, "=")
 					if len(parts) != 2 {
