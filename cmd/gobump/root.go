@@ -26,9 +26,10 @@ var rootFlags rootCLIFlags
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "gobump",
-	Short: "gobump cli",
-	Args:  cobra.NoArgs,
+	Use:          "gobump",
+	Short:        "gobump cli",
+	Args:         cobra.NoArgs,
+	SilenceUsage: true,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if rootFlags.packages == "" && rootFlags.replaces == "" && rootFlags.bumpFile == "" {
 			return fmt.Errorf("no packages or replaces provided. Use --packages or --replaces or --bump-file")
