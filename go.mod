@@ -8,7 +8,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.6.0
 	github.com/spf13/cobra v1.9.1
-	golang.org/x/mod v0.22.0
+	golang.org/x/mod v0.23.0
 	k8s.io/apimachinery v0.32.2
 	sigs.k8s.io/release-utils v0.9.0
 )
