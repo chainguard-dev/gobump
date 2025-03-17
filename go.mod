@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/mod v0.24.0
-	k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery v0.32.3
 	sigs.k8s.io/release-utils v0.11.0
 )
 
