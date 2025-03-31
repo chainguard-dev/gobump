@@ -2,7 +2,7 @@ module github.com/chainguard-dev/gobump
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/ghodss/yaml v1.0.0
@@ -10,7 +10,7 @@ require (
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/mod v0.24.0
 	k8s.io/apimachinery v0.32.3
-	sigs.k8s.io/release-utils v0.11.0
+	sigs.k8s.io/release-utils v0.11.1
 )
 
 require (
