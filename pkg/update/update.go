@@ -34,6 +34,7 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	if _, ok := pkgVersions[modFile.Module.Mod.Path]; ok {
 		return fmt.Errorf("bumping the main module is not allowed '%s'", modFile.Module.Mod.Path)
 	}
+	errors := []error{}
 	// Detect if the list of packages contain any replace statement for the package, if so we might drop that replace with a new one.
 	for _, replace := range modFile.Replace {
 		if replace != nil {
@@ -47,7 +48,8 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				}
 				if semver.IsValid(pkgVersions[replace.New.Path].Version) {
 					if semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version)
+						errors = append(errors, fmt.Errorf("package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version))
+						continue
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[replace.New.Path].Version)
@@ -65,13 +67,22 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				// In that case, skip the compare check.
 				if semver.IsValid(pkgVersions[require.Mod.Path].Version) {
 					if semver.Compare(require.Mod.Version, pkgVersions[require.Mod.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", require.Mod.Path, pkgVersions[require.Mod.Path].Version, require.Mod.Version)
+						errors = append(errors, fmt.Errorf("package %s with version '%s' is already at version %s", require.Mod.Path, pkgVersions[require.Mod.Path].Version, require.Mod.Version))
+						continue
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[require.Mod.Path].Version)
 				}
 			}
 		}
+	}
+
+	if len(errors) > 0 {
+		errMsg := "The following errors were found:\n"
+		for _, err := range errors {
+			errMsg += fmt.Sprintf("- %v\n", err)
+		}
+		return fmt.Errorf("%s", errMsg)
 	}
 
 	return nil
