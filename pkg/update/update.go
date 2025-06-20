@@ -34,6 +34,11 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	if _, ok := pkgVersions[modFile.Module.Mod.Path]; ok {
 		return fmt.Errorf("bumping the main module is not allowed '%s'", modFile.Module.Mod.Path)
 	}
+	type pkgVersion struct {
+		ReqVersion, AvailableVersion string
+	}
+	errorPkgVer := make(map[string]pkgVersion)
+
 	// Detect if the list of packages contain any replace statement for the package, if so we might drop that replace with a new one.
 	for _, replace := range modFile.Replace {
 		if replace != nil {
@@ -47,7 +52,11 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				}
 				if semver.IsValid(pkgVersions[replace.New.Path].Version) {
 					if semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", replace.New.Path, replace.New.Version, pkgVersions[replace.New.Path].Version)
+						errorPkgVer[replace.New.Path] = pkgVersion{
+							ReqVersion:       pkgVersions[replace.New.Path].Version,
+							AvailableVersion: replace.New.Version,
+						}
+						continue
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[replace.New.Path].Version)
@@ -65,13 +74,37 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				// In that case, skip the compare check.
 				if semver.IsValid(pkgVersions[require.Mod.Path].Version) {
 					if semver.Compare(require.Mod.Version, pkgVersions[require.Mod.Path].Version) > 0 {
-						return fmt.Errorf("package %s with version '%s' is already at version %s", require.Mod.Path, pkgVersions[require.Mod.Path].Version, require.Mod.Version)
+						// Already present, check if the version is smaller or not
+						if existingPkg, exists := errorPkgVer[require.Mod.Path]; exists {
+							if semver.Compare(require.Mod.Version, existingPkg.AvailableVersion) > 0 {
+								errorPkgVer[require.Mod.Path] = pkgVersion{
+									ReqVersion:       pkgVersions[require.Mod.Path].Version, // Requested version stays the same
+									AvailableVersion: require.Mod.Version,                   // Update to higher available version
+								}
+							}
+						} else {
+							// First time, add it to the map
+							errorPkgVer[require.Mod.Path] = pkgVersion{
+								ReqVersion:       pkgVersions[require.Mod.Path].Version,
+								AvailableVersion: require.Mod.Version,
+							}
+						}
+						continue
 					}
 				} else {
 					fmt.Printf("Requesting pin to %s.\n This is not a valid SemVer, so skipping version check.\n", pkgVersions[require.Mod.Path].Version)
 				}
 			}
 		}
+	}
+
+	if len(errorPkgVer) > 0 {
+		var errorMsg strings.Builder
+		errorMsg.WriteString("The following errors were found::\n")
+		for pkg, ver := range errorPkgVer {
+			errorMsg.WriteString(fmt.Sprintf("  - package %s: requested version '%s', is already at version '%s'\n", pkg, ver.ReqVersion, ver.AvailableVersion))
+		}
+		return fmt.Errorf("%s", errorMsg.String())
 	}
 
 	return nil
