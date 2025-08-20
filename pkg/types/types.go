@@ -18,7 +18,7 @@ type Config struct {
 	Tidy            bool
 	TidyCompat      string
 	TidySkipInitial bool
-	Work            bool
+	ForceWork       bool
 }
 
 // PackageList is used to marshal from yaml/json file to get the list of packages.

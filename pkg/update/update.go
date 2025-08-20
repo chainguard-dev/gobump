@@ -207,7 +207,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 
 	if _, err := os.Stat(path.Join(cfg.Modroot, "vendor")); err == nil {
-		output, err := run.GoVendor(cfg.Modroot, cfg.Work)
+		output, err := run.GoVendor(cfg.Modroot, cfg.ForceWork)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go vendor': %v with output: %v", err, output)
 		}

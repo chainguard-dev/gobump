@@ -90,7 +90,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy, Work: rootFlags.work}); err != nil {
+		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy, ForceWork: rootFlags.work}); err != nil {
 			return fmt.Errorf("failed to run update. Error: %v", err)
 		}
 		return nil

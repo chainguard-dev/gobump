@@ -314,8 +314,8 @@ require github.com/google/uuid v1.3.0
 
 			// Test DoUpdate with work flag
 			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{
-				Modroot: tmpDir,
-				Work:    tc.workFlag,
+				Modroot:   tmpDir,
+				ForceWork: tc.workFlag,
 			})
 			if err != nil {
 				t.Errorf("DoUpdate() error = %v", err)
