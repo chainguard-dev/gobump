@@ -1,3 +1,4 @@
+// Package cmd contains the command-line interface for gobump.
 package cmd
 
 import (
@@ -20,6 +21,7 @@ type rootCLIFlags struct {
 	skipInitialTidy bool
 	showDiff        bool
 	tidyCompat      string
+	work            bool
 }
 
 var rootFlags rootCLIFlags
@@ -88,13 +90,14 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy}); err != nil {
+		if _, err := update.DoUpdate(pkgVersions, &types.Config{Modroot: rootFlags.modroot, Tidy: rootFlags.tidy, GoVersion: rootFlags.goVersion, ShowDiff: rootFlags.showDiff, TidyCompat: rootFlags.tidyCompat, TidySkipInitial: rootFlags.skipInitialTidy, Work: rootFlags.work}); err != nil {
 			return fmt.Errorf("failed to run update. Error: %v", err)
 		}
 		return nil
 	},
 }
 
+// RootCmd returns the root cobra command for gobump.
 func RootCmd() *cobra.Command {
 	return rootCmd
 }
@@ -114,4 +117,5 @@ func init() {
 	flagSet.BoolVar(&rootFlags.showDiff, "show-diff", false, "Show the difference between the original and 'go.mod' files")
 	flagSet.StringVar(&rootFlags.goVersion, "go-version", "", "set the go-version for go-mod-tidy")
 	flagSet.StringVar(&rootFlags.tidyCompat, "compat", "", "set the go version for which the tidied go.mod and go.sum files should be compatible")
+	flagSet.BoolVar(&rootFlags.work, "work", false, "Use 'go work vendor' instead of 'go mod vendor'")
 }

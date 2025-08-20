@@ -1,5 +1,6 @@
-package types
+package types //nolint:revive
 
+// Package represents a Go module package to be updated or replaced.
 type Package struct {
 	OldName string `json:"oldName,omitempty" yaml:"oldName,omitempty"`
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
@@ -9,6 +10,7 @@ type Package struct {
 	Index   int    `json:"index,omitempty" yaml:"index,omitempty"`
 }
 
+// Config contains configuration options for the update process.
 type Config struct {
 	Modroot         string
 	GoVersion       string
@@ -16,9 +18,10 @@ type Config struct {
 	Tidy            bool
 	TidyCompat      string
 	TidySkipInitial bool
+	Work            bool
 }
 
-// Used to marshal from yaml/json file to get the list of packages
+// PackageList is used to marshal from yaml/json file to get the list of packages.
 type PackageList struct {
 	Packages []Package `json:"packages" yaml:"packages"`
 }
