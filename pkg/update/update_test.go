@@ -1,7 +1,9 @@
 package update
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -203,6 +205,124 @@ func TestGoModTidy(t *testing.T) {
 			if tc.wantErr && err.Error() != tc.errMsg {
 				t.Errorf("expected err message %s, got %s", tc.errMsg, err.Error())
 			}
+			for pkg, want := range tc.want {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("expected %s, got %s", want, got)
+				}
+			}
+		})
+	}
+}
+
+func TestWorkFlagInUpdate(t *testing.T) {
+	testCases := []struct {
+		name        string
+		pkgVersions map[string]*types.Package
+		workFlag    bool
+		setupFunc   func(string) error
+		want        map[string]string
+	}{
+		{
+			name: "update with work flag false",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.4.0",
+				},
+			},
+			workFlag: false,
+			want: map[string]string{
+				"github.com/google/uuid": "v1.4.0",
+			},
+		},
+		{
+			name: "update with work flag true",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.4.0",
+				},
+			},
+			workFlag: true,
+			want: map[string]string{
+				"github.com/google/uuid": "v1.4.0",
+			},
+		},
+		{
+			name: "update with work flag true and go.work file",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.4.0",
+				},
+			},
+			workFlag: true,
+			setupFunc: func(dir string) error {
+				// Create a go.work file
+				workContent := `go 1.21
+
+use .
+`
+				return os.WriteFile(filepath.Join(dir, "go.work"), []byte(workContent), 0600)
+			},
+			want: map[string]string{
+				"github.com/google/uuid": "v1.4.0",
+			},
+		},
+		{
+			name: "update with vendor directory and work flag false",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.4.0",
+				},
+			},
+			workFlag: false,
+			setupFunc: func(dir string) error {
+				// Create vendor directory to trigger vendor command
+				vendorDir := filepath.Join(dir, "vendor")
+				return os.Mkdir(vendorDir, 0750)
+			},
+			want: map[string]string{
+				"github.com/google/uuid": "v1.4.0",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a temporary directory for testing
+			tmpDir := t.TempDir()
+
+			// Setup test environment if needed
+			if tc.setupFunc != nil {
+				if err := tc.setupFunc(tmpDir); err != nil {
+					t.Fatalf("Setup failed: %v", err)
+				}
+			}
+
+			// Create a simple go.mod file
+			goModContent := `module test
+
+go 1.21
+
+require github.com/google/uuid v1.3.0
+`
+			if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte(goModContent), 0600); err != nil {
+				t.Fatalf("Failed to create go.mod: %v", err)
+			}
+
+			// Test DoUpdate with work flag
+			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{
+				Modroot:   tmpDir,
+				ForceWork: tc.workFlag,
+			})
+			if err != nil {
+				t.Errorf("DoUpdate() error = %v", err)
+				return
+			}
+
+			// Verify the package was updated
 			for pkg, want := range tc.want {
 				if got := getVersion(modFile, pkg); got != want {
 					t.Errorf("expected %s, got %s", want, got)

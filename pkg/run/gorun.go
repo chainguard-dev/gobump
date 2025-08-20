@@ -1,3 +1,4 @@
+// Package run provides utilities for running go commands.
 package run
 
 import (
@@ -11,6 +12,7 @@ import (
 	versionutil "k8s.io/apimachinery/pkg/util/version"
 )
 
+// GoModTidy runs go mod tidy with the specified go version and compatibility settings.
 func GoModTidy(modroot, goVersion, compat string) (string, error) {
 	if goVersion == "" {
 		cmd := exec.Command("go", "env", "GOVERSION")
@@ -32,7 +34,7 @@ func GoModTidy(modroot, goVersion, compat string) (string, error) {
 		args = append(args, "-compat", compat)
 	}
 
-	cmd := exec.Command("go", args...)
+	cmd := exec.Command("go", args...) //nolint:gosec
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
 		return strings.TrimSpace(string(bytes)), err
@@ -68,16 +70,17 @@ func findGoWork(modroot string) string {
 	}
 }
 
-func GoVendor(dir string) (string, error) {
-	if findGoWork(dir) == "" {
-		log.Print("Running go mod vendor...")
-		cmd := exec.Command("go", "mod", "vendor")
+// GoVendor runs go mod vendor or go work vendor depending on workspace configuration.
+func GoVendor(dir string, forceWork bool) (string, error) {
+	if forceWork || findGoWork(dir) != "" {
+		log.Print("Running go work vendor...")
+		cmd := exec.Command("go", "work", "vendor")
 		if bytes, err := cmd.CombinedOutput(); err != nil {
 			return strings.TrimSpace(string(bytes)), err
 		}
 	} else {
-		log.Print("Running go work vendor...")
-		cmd := exec.Command("go", "work", "vendor")
+		log.Print("Running go mod vendor...")
+		cmd := exec.Command("go", "mod", "vendor")
 		if bytes, err := cmd.CombinedOutput(); err != nil {
 			return strings.TrimSpace(string(bytes)), err
 		}
@@ -86,6 +89,7 @@ func GoVendor(dir string) (string, error) {
 	return "", nil
 }
 
+// GoGetModule runs go get for a specific module and version.
 func GoGetModule(name, version, modroot string) (string, error) {
 	cmd := exec.Command("go", "get", fmt.Sprintf("%s@%s", name, version)) //nolint:gosec
 	cmd.Dir = modroot
@@ -95,21 +99,23 @@ func GoGetModule(name, version, modroot string) (string, error) {
 	return "", nil
 }
 
+// GoModEditReplaceModule edits go.mod to replace one module with another.
 func GoModEditReplaceModule(nameOld, nameNew, version, modroot string) (string, error) {
 	cmd := exec.Command("go", "mod", "edit", "-dropreplace", nameOld) //nolint:gosec
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
-		return strings.TrimSpace(string(bytes)), fmt.Errorf("Error running go command to drop replace modules: %w", err)
+		return strings.TrimSpace(string(bytes)), fmt.Errorf("error running go command to drop replace modules: %w", err)
 	}
 
 	cmd = exec.Command("go", "mod", "edit", "-replace", fmt.Sprintf("%s=%s@%s", nameOld, nameNew, version)) //nolint:gosec
 	cmd.Dir = modroot
 	if bytes, err := cmd.CombinedOutput(); err != nil {
-		return strings.TrimSpace(string(bytes)), fmt.Errorf("Error running go command to replace modules: %w", err)
+		return strings.TrimSpace(string(bytes)), fmt.Errorf("error running go command to replace modules: %w", err)
 	}
 	return "", nil
 }
 
+// GoModEditDropRequireModule drops a require directive from go.mod.
 func GoModEditDropRequireModule(name, modroot string) (string, error) {
 	cmd := exec.Command("go", "mod", "edit", "-droprequire", name) //nolint:gosec
 	cmd.Dir = modroot
@@ -120,6 +126,7 @@ func GoModEditDropRequireModule(name, modroot string) (string, error) {
 	return "", nil
 }
 
+// GoModEditRequireModule adds or updates a require directive in go.mod.
 func GoModEditRequireModule(name, version, modroot string) (string, error) {
 	if bytes, err := GoModEditDropRequireModule(name, modroot); err != nil {
 		return strings.TrimSpace(string(bytes)), err

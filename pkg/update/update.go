@@ -1,3 +1,4 @@
+// Package update provides functionality for updating Go module dependencies.
 package update
 
 import (
@@ -7,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -17,7 +19,9 @@ import (
 	"golang.org/x/mod/semver"
 )
 
+// ParseGoModfile parses a go.mod file from the specified path.
 func ParseGoModfile(path string) (*modfile.File, []byte, error) {
+	path = filepath.Clean(path)
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, content, err
@@ -110,6 +114,7 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	return nil
 }
 
+// DoUpdate performs the actual update of Go module dependencies.
 func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfile.File, error) {
 	var err error
 	goVersion := cfg.GoVersion
@@ -202,7 +207,7 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 	}
 
 	if _, err := os.Stat(path.Join(cfg.Modroot, "vendor")); err == nil {
-		output, err := run.GoVendor(cfg.Modroot)
+		output, err := run.GoVendor(cfg.Modroot, cfg.ForceWork)
 		if err != nil {
 			return nil, fmt.Errorf("failed to run 'go vendor': %v with output: %v", err, output)
 		}
