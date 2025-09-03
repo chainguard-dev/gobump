@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	versionutil "k8s.io/apimachinery/pkg/util/version"
@@ -15,13 +16,8 @@ import (
 // GoModTidy runs go mod tidy with the specified go version and compatibility settings.
 func GoModTidy(modroot, goVersion, compat string) (string, error) {
 	if goVersion == "" {
-		cmd := exec.Command("go", "env", "GOVERSION")
-		cmd.Stderr = os.Stderr
-		out, err := cmd.Output()
-		if err != nil {
-			return "", fmt.Errorf("%v: %w", cmd, err)
-		}
-		goVersion = strings.TrimPrefix(strings.TrimSpace(string(out)), "go")
+		// Use runtime.Version() instead of exec.Command
+		goVersion = strings.TrimPrefix(runtime.Version(), "go")
 
 		v := versionutil.MustParseGeneric(goVersion)
 		goVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
@@ -70,9 +66,48 @@ func findGoWork(modroot string) string {
 	}
 }
 
+// UpdateGoWorkVersion updates the go.work version if we're using workspaces.
+// This should be called early before any go commands to avoid version mismatch errors.
+func UpdateGoWorkVersion(modroot string, forceWork bool, goVersion string) error {
+	// Find go.work file if it exists
+	workPath := findGoWork(modroot)
+	if !forceWork && workPath == "" {
+		// No workspace and not forcing, nothing to do
+		return nil
+	}
+
+	if workPath == "" && forceWork {
+		// Try current directory if --work flag is used
+		workPath = findGoWork(".")
+	}
+
+	if workPath == "" {
+		// Still no go.work found
+		return nil
+	}
+
+	// Auto-detect Go version if not provided
+	if goVersion == "" {
+		goVersion = strings.TrimPrefix(runtime.Version(), "go")
+		v := versionutil.MustParseGeneric(goVersion)
+		goVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+	}
+
+	log.Printf("Updating go.work version to %s...\n", goVersion)
+	dir := filepath.Dir(workPath)
+	cmd := exec.Command("go", "work", "edit", "-go", goVersion)
+	cmd.Dir = dir
+	if bytes, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to update go.work version: %w, output: %s", err, strings.TrimSpace(string(bytes)))
+	}
+
+	return nil
+}
+
 // GoVendor runs go mod vendor or go work vendor depending on workspace configuration.
 func GoVendor(dir string, forceWork bool) (string, error) {
-	if forceWork || findGoWork(dir) != "" {
+	workPath := findGoWork(dir)
+	if forceWork || workPath != "" {
 		log.Print("Running go work vendor...")
 		cmd := exec.Command("go", "work", "vendor")
 		if bytes, err := cmd.CombinedOutput(); err != nil {
