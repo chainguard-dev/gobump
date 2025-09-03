@@ -2,21 +2,21 @@
 package update
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
-	"github.com/chainguard-dev/gobump/pkg/run"
-	"github.com/chainguard-dev/gobump/pkg/types"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/semver"
+
+	"github.com/chainguard-dev/gobump/pkg/run"
+	"github.com/chainguard-dev/gobump/pkg/types"
 )
 
 // ParseGoModfile parses a go.mod file from the specified path.
@@ -122,6 +122,12 @@ func DoUpdate(pkgVersions map[string]*types.Package, cfg *types.Config) (*modfil
 		if goVersion, err = getGoVersionFromEnvironment(); err != nil {
 			return nil, fmt.Errorf("failed to get the Go version from the local system: %v", err)
 		}
+	}
+
+	// Update go.work version FIRST before ANY go commands to avoid version mismatch errors
+	// This must happen even before the initial tidy
+	if err := run.UpdateGoWorkVersion(cfg.Modroot, cfg.ForceWork, goVersion); err != nil {
+		log.Printf("Warning: failed to update go.work version: %v", err)
 	}
 
 	// Run go mod tidy before
@@ -249,14 +255,8 @@ func getVersion(modFile *modfile.File, packageName string) string {
 
 // getGoVersionFromEnvironment returns the Go version from the local environment.
 func getGoVersionFromEnvironment() (string, error) {
-	cmd := exec.Command("go", "version")
-	var out bytes.Buffer
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		return "", fmt.Errorf("failed to execute 'go version': %v", err)
-	}
-	versionOutput := out.String()
+	// Use runtime.Version() to get the Go version without exec.Command
+	versionOutput := fmt.Sprintf("go version %s", runtime.Version())
 	return parseGoVersionString(versionOutput)
 }
 
