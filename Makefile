@@ -61,7 +61,7 @@ test:
 golangci-lint:
 	rm -f $(GOLANGCI_LINT_BIN) || :
 	set -e ;\
-	GOBIN=$(GOLANGCI_LINT_DIR) $(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2	 ;\
+	GOBIN=$(GOLANGCI_LINT_DIR) $(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
 
 lint: golangci-lint
 	$(GOLANGCI_LINT_BIN) run -n

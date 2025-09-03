@@ -181,7 +181,7 @@ replace example.com/old => ./new`,
 				}
 
 				// Verify update
-				updated, err := os.ReadFile(workPath)
+				updated, err := os.ReadFile(filepath.Clean(workPath))
 				if err != nil {
 					t.Fatalf("Failed to read updated go.work: %v", err)
 				}

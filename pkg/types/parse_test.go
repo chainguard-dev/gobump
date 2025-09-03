@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive // types is a valid package name
 
 import (
 	"strings"
