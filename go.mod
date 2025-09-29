@@ -10,7 +10,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	golang.org/x/mod v0.27.0
 	k8s.io/apimachinery v0.32.8
-	sigs.k8s.io/release-utils v0.12.1
+	sigs.k8s.io/release-utils v0.12.2
 )
 
 require (
