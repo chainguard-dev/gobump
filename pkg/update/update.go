@@ -36,7 +36,7 @@ func ParseGoModfile(path string) (*modfile.File, []byte, error) {
 
 func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.File) error {
 	if _, ok := pkgVersions[modFile.Module.Mod.Path]; ok {
-		return fmt.Errorf("bumping the main module is not allowed '%s'", modFile.Module.Mod.Path)
+		return fmt.Errorf("bumping the main module is not allowed %q", modFile.Module.Mod.Path)
 	}
 	type pkgVersion struct {
 		ReqVersion, AvailableVersion string
