@@ -8,6 +8,9 @@ type Package struct {
 	Replace bool   `json:"replace,omitempty" yaml:"replace,omitempty"`
 	Require bool   `json:"require,omitempty" yaml:"require,omitempty"`
 	Index   int    `json:"index,omitempty" yaml:"index,omitempty"`
+	// Force allows downgrading a package to a version older than the current one.
+	// By default, downgrade attempts are skipped with a warning.
+	Force bool `json:"force,omitempty" yaml:"force,omitempty"`
 }
 
 // Config contains configuration options for the update process.

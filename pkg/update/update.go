@@ -41,7 +41,7 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 	type pkgVersion struct {
 		ReqVersion, AvailableVersion string
 	}
-	errorPkgVer := make(map[string]pkgVersion)
+	warnPkgVer := make(map[string]pkgVersion)
 
 	// Detect if the list of packages contain any replace statement for the package, if so we might drop that replace with a new one.
 	for _, replace := range modFile.Replace {
@@ -55,8 +55,8 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 					pkgVersions[replace.New.Path].OldName = replace.Old.Path
 				}
 				if semver.IsValid(pkgVersions[replace.New.Path].Version) {
-					if semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
-						errorPkgVer[replace.New.Path] = pkgVersion{
+					if !pkgVersions[replace.New.Path].Force && semver.Compare(replace.New.Version, pkgVersions[replace.New.Path].Version) > 0 {
+						warnPkgVer[replace.New.Path] = pkgVersion{
 							ReqVersion:       pkgVersions[replace.New.Path].Version,
 							AvailableVersion: replace.New.Version,
 						}
@@ -77,18 +77,17 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 				// Sometimes we request to pin to a specific commit.
 				// In that case, skip the compare check.
 				if semver.IsValid(pkgVersions[require.Mod.Path].Version) {
-					if semver.Compare(require.Mod.Version, pkgVersions[require.Mod.Path].Version) > 0 {
-						// Already present, check if the version is smaller or not
-						if existingPkg, exists := errorPkgVer[require.Mod.Path]; exists {
+					if !pkgVersions[require.Mod.Path].Force && semver.Compare(require.Mod.Version, pkgVersions[require.Mod.Path].Version) > 0 {
+						// Track the highest known current version for this package across multiple require entries
+						if existingPkg, exists := warnPkgVer[require.Mod.Path]; exists {
 							if semver.Compare(require.Mod.Version, existingPkg.AvailableVersion) > 0 {
-								errorPkgVer[require.Mod.Path] = pkgVersion{
-									ReqVersion:       pkgVersions[require.Mod.Path].Version, // Requested version stays the same
-									AvailableVersion: require.Mod.Version,                   // Update to higher available version
+								warnPkgVer[require.Mod.Path] = pkgVersion{
+									ReqVersion:       pkgVersions[require.Mod.Path].Version,
+									AvailableVersion: require.Mod.Version,
 								}
 							}
 						} else {
-							// First time, add it to the map
-							errorPkgVer[require.Mod.Path] = pkgVersion{
+							warnPkgVer[require.Mod.Path] = pkgVersion{
 								ReqVersion:       pkgVersions[require.Mod.Path].Version,
 								AvailableVersion: require.Mod.Version,
 							}
@@ -102,13 +101,9 @@ func checkPackageValues(pkgVersions map[string]*types.Package, modFile *modfile.
 		}
 	}
 
-	if len(errorPkgVer) > 0 {
-		var errorMsg strings.Builder
-		errorMsg.WriteString("The following errors were found::\n")
-		for pkg, ver := range errorPkgVer {
-			errorMsg.WriteString(fmt.Sprintf("  - package %s: requested version '%s', is already at version '%s'\n", pkg, ver.ReqVersion, ver.AvailableVersion))
-		}
-		return fmt.Errorf("%s", errorMsg.String())
+	for pkg, ver := range warnPkgVer {
+		log.Printf("Warning: package %s: requested version %q is older than current version %q, skipping", pkg, ver.ReqVersion, ver.AvailableVersion)
+		delete(pkgVersions, pkg)
 	}
 
 	return nil
