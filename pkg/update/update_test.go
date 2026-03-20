@@ -185,7 +185,7 @@ func TestGoModTidy(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			errMsg:  "bumping the main module is not allowed 'github.com/puerco/hello'",
+			errMsg:  "bumping the main module is not allowed \"github.com/puerco/hello\"",
 		},
 	}
 
@@ -357,7 +357,7 @@ func TestGoModTidySkipInitial(t *testing.T) {
 			},
 			tidySkipInitial: false,
 			wantError:       true,
-			errMsgContains:  "ambiguous import",
+			errMsgContains:  "failed to run",
 		},
 		{
 			name: "skip initial tidy",
@@ -451,24 +451,27 @@ func TestReplaceAndRequire(t *testing.T) {
 	}
 }
 
-func TestUpdateError(t *testing.T) {
+func TestDowngradeSkipped(t *testing.T) {
 	testCases := []struct {
-		name        string
-		pkgVersions map[string]*types.Package
-		fileName    string
+		name           string
+		pkgVersions    map[string]*types.Package
+		fileName       string
+		currentVersion string
 	}{
 		{
-			name: "no downgrade",
+			name: "downgrade skipped with warning",
 			pkgVersions: map[string]*types.Package{
 				"github.com/google/uuid": {
 					Name:    "github.com/google/uuid",
 					Version: "v1.0.0",
 				},
 			},
+			currentVersion: "v1.3.1",
 		},
 		{
-			name:     "no downgrade - from file",
-			fileName: "testdata/nodowngrade.yaml",
+			name:           "downgrade skipped with warning - from file",
+			fileName:       "testdata/nodowngrade.yaml",
+			currentVersion: "v1.3.1",
 		},
 	}
 
@@ -478,9 +481,12 @@ func TestUpdateError(t *testing.T) {
 			copyFile(t, "testdata/aws-efs-csi-driver/go.mod", tmpdir)
 
 			pkgVersions := maybeParseFile(t, tc.fileName, tc.pkgVersions)
-			_, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
-			if err == nil {
-				t.Fatal("expected error, got nil")
+			modFile, err := DoUpdate(pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			if err != nil {
+				t.Fatalf("expected no error, got: %v", err)
+			}
+			if got := getVersion(modFile, "github.com/google/uuid"); got != tc.currentVersion {
+				t.Errorf("github.com/google/uuid version: got = %s, want = %s", got, tc.currentVersion)
 			}
 		})
 	}
@@ -641,62 +647,83 @@ func TestParseGoVersionString(t *testing.T) {
 	}
 }
 
-func TestHigherVersionRejection(t *testing.T) {
+func TestDowngradeHandling(t *testing.T) {
 	testCases := []struct {
-		name                 string
-		pkgVersions          map[string]*types.Package
-		setupFunc            func(string)
-		expectErrorToContain string
+		name         string
+		pkgVersions  map[string]*types.Package
+		setupFunc    func(string)
+		wantErr      bool
+		wantVersions map[string]string
 	}{
 		{
-			name: "reject downgrade for required module",
+			name: "downgrade skipped for required module",
 			pkgVersions: map[string]*types.Package{
 				"github.com/google/uuid": {
 					Name:    "github.com/google/uuid",
-					Version: "v1.0.0", // Lower version than what's in the go.mod
+					Version: "v1.0.0", // lower than v1.3.1 in go.mod
 				},
 			},
 			setupFunc: func(dir string) {
-				// Copy a go.mod with a higher version of github.com/google/uuid
 				copyFile(t, "testdata/aws-efs-csi-driver/go.mod", dir)
 			},
-			expectErrorToContain: "package github.com/google/uuid: requested version 'v1.0.0', is already at version",
+			wantVersions: map[string]string{
+				"github.com/google/uuid": "v1.3.1", // unchanged
+			},
 		},
 		{
-			name: "reject downgrade for replaced module",
+			name: "downgrade skipped for replaced module",
 			pkgVersions: map[string]*types.Package{
 				"k8s.io/client-go": {
 					Name:    "k8s.io/client-go",
 					OldName: "k8s.io/client-go",
-					Version: "v0.20.0", // Lower version than what's in the replace directive
+					Version: "v0.20.0", // lower than what's in the replace directive
 					Replace: true,
 				},
 			},
 			setupFunc: func(dir string) {
 				copyFile(t, "testdata/aws-efs-csi-driver/go.mod", dir)
 			},
-			expectErrorToContain: "package k8s.io/client-go: requested version 'v0.20.0', is already at version",
 		},
 		{
-			name: "reject multiple downgrades",
+			name: "multiple downgrades all skipped",
 			pkgVersions: map[string]*types.Package{
 				"github.com/google/uuid": {
 					Name:    "github.com/google/uuid",
-					Version: "v1.0.0", // In the go.mod (v1.3.1)
+					Version: "v1.0.0", // go.mod has v1.3.1
 				},
 				"github.com/aws/aws-sdk-go": {
 					Name:    "github.com/aws/aws-sdk-go",
-					Version: "v1.40.0", // In the go.mod (v1.44.116)
+					Version: "v1.40.0", // go.mod has v1.44.116
 				},
 				"k8s.io/api": {
 					Name:    "k8s.io/api",
-					Version: "v0.20.0", // In the go.mod (v0.26.10)
+					Version: "v0.20.0", // go.mod has v0.26.10
 				},
 			},
 			setupFunc: func(dir string) {
 				copyFile(t, "testdata/aws-efs-csi-driver/go.mod", dir)
 			},
-			expectErrorToContain: "The following errors were found:",
+			wantVersions: map[string]string{
+				"github.com/google/uuid":    "v1.3.1",    // unchanged
+				"github.com/aws/aws-sdk-go": "v1.44.116", // unchanged
+				"k8s.io/api":                "v0.26.10",  // unchanged
+			},
+		},
+		{
+			name: "force flag allows downgrade for required module",
+			pkgVersions: map[string]*types.Package{
+				"github.com/google/uuid": {
+					Name:    "github.com/google/uuid",
+					Version: "v1.0.0", // lower than v1.3.1 in go.mod
+					Force:   true,
+				},
+			},
+			setupFunc: func(dir string) {
+				copyFile(t, "testdata/aws-efs-csi-driver/go.mod", dir)
+			},
+			wantVersions: map[string]string{
+				"github.com/google/uuid": "v1.0.0", // forced downgrade
+			},
 		},
 	}
 
@@ -706,29 +733,19 @@ func TestHigherVersionRejection(t *testing.T) {
 
 			tc.setupFunc(tmpdir)
 
-			_, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
-
-			if err == nil {
-				t.Fatalf("Expected error but got nil") // Should get an error
-			}
-
-			if !strings.Contains(err.Error(), tc.expectErrorToContain) {
-				t.Errorf("Expected error to contain %q, but got: %v", tc.expectErrorToContain, err)
-			}
-
-			// For multiple downgrade test, verify all modules are mentioned in the error
-			if tc.name == "reject multiple downgrades" {
-				errStr := err.Error()
-				for pkg := range tc.pkgVersions {
-					if !strings.Contains(errStr, pkg) {
-						t.Errorf("Expected error to contain package name %q, but got: %v", pkg, err)
-					}
+			modFile, err := DoUpdate(tc.pkgVersions, &types.Config{Modroot: tmpdir, Tidy: false, GoVersion: ""})
+			if tc.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
 				}
-
-				errorCount := strings.Count(errStr, "- package ")
-				if errorCount != len(tc.pkgVersions) {
-					t.Errorf("Expected %d error messages, but found %d in: %v",
-						len(tc.pkgVersions), errorCount, err)
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			for pkg, want := range tc.wantVersions {
+				if got := getVersion(modFile, pkg); got != want {
+					t.Errorf("package %s version: got = %s, want = %s", pkg, got, want)
 				}
 			}
 		})
