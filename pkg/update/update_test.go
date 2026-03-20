@@ -357,7 +357,7 @@ func TestGoModTidySkipInitial(t *testing.T) {
 			},
 			tidySkipInitial: false,
 			wantError:       true,
-			errMsgContains:  "ambiguous import",
+			errMsgContains:  "failed to run",
 		},
 		{
 			name: "skip initial tidy",
