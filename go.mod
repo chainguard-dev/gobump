@@ -1,14 +1,12 @@
 module github.com/chainguard-dev/gobump
 
-go 1.24.0
-
-toolchain go1.24.7
+go 1.25.0
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/google/go-cmp v0.7.0
 	github.com/spf13/cobra v1.10.1
-	golang.org/x/mod v0.27.0
+	golang.org/x/mod v0.35.0
 	k8s.io/apimachinery v0.32.8
 	sigs.k8s.io/release-utils v0.12.1
 )
