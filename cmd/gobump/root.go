@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/chainguard-dev/gobump/pkg/types"
@@ -29,9 +30,13 @@ var rootFlags rootCLIFlags
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:          "gobump",
-	Short:        "gobump cli",
+	Short:        "gobump cli (deprecated, use omnibump instead)",
 	Args:         cobra.NoArgs,
 	SilenceUsage: true,
+	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+		log.Println("gobump is deprecated and no longer maintained, use omnibump instead: https://github.com/chainguard-dev/omnibump")
+		return nil
+	},
 	RunE: func(_ *cobra.Command, _ []string) error {
 		if rootFlags.packages == "" && rootFlags.replaces == "" && rootFlags.bumpFile == "" {
 			return fmt.Errorf("no packages or replaces provided. Use --packages or --replaces or --bump-file")
