@@ -1,4 +1,8 @@
 # GoBump
+
+> **Deprecated:** gobump is no longer maintained. Use
+> [omnibump](https://github.com/chainguard-dev/omnibump) instead.
+
 GoBump is a simple command-line tool written in Go that allows you to update the versions of your Go dependencies.
 
 ## Usage
